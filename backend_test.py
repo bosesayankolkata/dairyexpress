@@ -97,15 +97,34 @@ class MilkDeliveryAPITester:
             return False
 
         headers = {'Authorization': f'Bearer {self.admin_token}'}
+        
+        # First, try to get existing delivery persons
+        success, existing_persons = self.run_test(
+            "Get Existing Delivery Persons",
+            "GET",
+            "admin/delivery-persons",
+            200,
+            headers=headers
+        )
+        
+        if success and existing_persons:
+            # Use the first existing person for testing
+            self.created_person_id = existing_persons[0]['id']
+            self.log_test("Use Existing Delivery Person", True, f"Using existing person ID: {self.created_person_id}")
+            return True
+        
+        # If no existing persons, create a new one with unique phone
+        import random
+        unique_phone = f"98765{random.randint(10000, 99999)}"
         person_data = {
             "name": "Test Delivery Person",
-            "phone": "9876543210",
+            "phone": unique_phone,
             "pincode": "123456",
             "password": "testpass123"
         }
         
         success, response = self.run_test(
-            "Create Delivery Person",
+            "Create New Delivery Person",
             "POST",
             "admin/delivery-persons",
             200,
@@ -115,6 +134,7 @@ class MilkDeliveryAPITester:
         
         if success and 'id' in response:
             self.created_person_id = response['id']
+            self.test_phone = unique_phone  # Store for login test
             return True
         return False
 
