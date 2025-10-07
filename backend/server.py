@@ -425,7 +425,35 @@ async def get_delivery_persons(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     
     persons = await db.delivery_persons.find({}, {"password_hash": 0}).to_list(1000)
-    return [DeliveryPerson(**parse_from_mongo(person)) for person in persons]
+    
+    # Handle legacy delivery persons with missing fields
+    result = []
+    for person in persons:
+        person_data = parse_from_mongo(person)
+        
+        # Add default values for missing fields (backward compatibility)
+        if 'address' not in person_data:
+            person_data['address'] = "Not provided"
+        if 'aadhar_number' not in person_data:
+            person_data['aadhar_number'] = "Not provided"
+        if 'bike_number' not in person_data:
+            person_data['bike_number'] = "Not provided"
+        if 'age' not in person_data:
+            person_data['age'] = 25
+        if 'gender' not in person_data:
+            person_data['gender'] = "Not specified"
+        if 'blood_group' not in person_data:
+            person_data['blood_group'] = "Not specified"
+        if 'time_of_work' not in person_data:
+            person_data['time_of_work'] = "Not specified"
+        if 'selected_pincodes' not in person_data:
+            person_data['selected_pincodes'] = [person_data.get('pincode', '')]
+        if 'total_deliveries' not in person_data:
+            person_data['total_deliveries'] = 0
+            
+        result.append(DeliveryPerson(**person_data))
+    
+    return result
 
 @api_router.put("/admin/delivery-persons/{person_id}/reset-password")
 async def reset_delivery_person_password(person_id: str, current_user: dict = Depends(get_current_user)):
