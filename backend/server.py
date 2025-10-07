@@ -23,7 +23,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT settings
-JWT_SECRET = "your-secret-key-change-in-production"
+JWT_SECRET = os.environ.get('JWT_SECRET', 'fallback-secret-for-dev')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
