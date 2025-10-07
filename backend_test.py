@@ -14,6 +14,7 @@ class MilkDeliveryAPITester:
         self.test_results = []
         self.created_person_id = None
         self.created_delivery_id = None
+        self.test_phone = None
 
     def log_test(self, name, success, details=""):
         """Log test result"""
