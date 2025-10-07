@@ -8,7 +8,7 @@ import "@/App.css";
 // Components
 import Login from "./components/Login";
 import DeliveryPersonDashboard from "./components/DeliveryPersonDashboard";
-import AdminDashboard from "./components/AdminDashboard";
+import AdminDashboard from "./components/AdminDashboard_Simple";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
