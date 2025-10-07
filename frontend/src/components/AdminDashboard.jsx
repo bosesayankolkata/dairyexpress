@@ -13,6 +13,7 @@ import { Users, Package, Plus, UserPlus, Truck, LogOut, Settings, Calendar, Chec
 import { toast } from 'sonner';
 import ProductManagement from './ProductManagement';
 import PinCodeManagement from './PinCodeManagement';
+import CustomerManagement from './CustomerManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
