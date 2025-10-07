@@ -250,6 +250,28 @@ async def get_delivery_persons(current_user: dict = Depends(get_current_user)):
     persons = await db.delivery_persons.find({}, {"password_hash": 0}).to_list(1000)
     return [DeliveryPerson(**parse_from_mongo(person)) for person in persons]
 
+@api_router.put("/admin/delivery-persons/{person_id}/reset-password")
+async def reset_delivery_person_password(person_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Generate new password
+    import random
+    import string
+    new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    password_hash = hash_password(new_password)
+    
+    # Update in database
+    result = await db.delivery_persons.update_one(
+        {"id": person_id},
+        {"$set": {"password_hash": password_hash}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Delivery person not found")
+    
+    return {"message": "Password reset successfully", "new_password": new_password}
+
 @api_router.post("/admin/deliveries", response_model=Delivery)
 async def create_delivery(delivery: DeliveryCreate, current_user: dict = Depends(get_current_user)):
     if current_user["user_type"] != "admin":
