@@ -446,6 +446,190 @@ async def get_all_deliveries(current_user: dict = Depends(get_current_user)):
     deliveries = await db.deliveries.find().to_list(1000)
     return [Delivery(**parse_from_mongo(delivery)) for delivery in deliveries]
 
+# Product Management Routes
+@api_router.post("/admin/categories", response_model=Category)
+async def create_category(category: CategoryBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    category_obj = Category(**category.dict())
+    category_data = prepare_for_mongo(category_obj.dict())
+    await db.categories.insert_one(category_data)
+    return category_obj
+
+@api_router.get("/admin/categories", response_model=List[Category])
+async def get_categories(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    categories = await db.categories.find().to_list(1000)
+    return [Category(**parse_from_mongo(cat)) for cat in categories]
+
+@api_router.put("/admin/categories/{category_id}")
+async def update_category(category_id: str, category_update: CategoryBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_data = prepare_for_mongo(category_update.dict())
+    result = await db.categories.update_one({"id": category_id}, {"$set": update_data})
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    return {"message": "Category updated successfully"}
+
+@api_router.post("/admin/product-types", response_model=ProductType)
+async def create_product_type(product_type: ProductTypeBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Verify category exists
+    category = await db.categories.find_one({"id": product_type.category_id})
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    
+    product_type_obj = ProductType(**product_type.dict())
+    product_type_data = prepare_for_mongo(product_type_obj.dict())
+    await db.product_types.insert_one(product_type_data)
+    return product_type_obj
+
+@api_router.get("/admin/product-types", response_model=List[ProductType])
+async def get_product_types(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    product_types = await db.product_types.find().to_list(1000)
+    return [ProductType(**parse_from_mongo(pt)) for pt in product_types]
+
+@api_router.post("/admin/characteristics", response_model=Characteristic)
+async def create_characteristic(characteristic: CharacteristicBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Verify product type exists
+    product_type = await db.product_types.find_one({"id": characteristic.product_type_id})
+    if not product_type:
+        raise HTTPException(status_code=404, detail="Product type not found")
+    
+    characteristic_obj = Characteristic(**characteristic.dict())
+    characteristic_data = prepare_for_mongo(characteristic_obj.dict())
+    await db.characteristics.insert_one(characteristic_data)
+    return characteristic_obj
+
+@api_router.get("/admin/characteristics", response_model=List[Characteristic])
+async def get_characteristics(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    characteristics = await db.characteristics.find().to_list(1000)
+    return [Characteristic(**parse_from_mongo(char)) for char in characteristics]
+
+@api_router.post("/admin/sizes", response_model=Size)
+async def create_size(size: SizeBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Verify characteristic exists
+    characteristic = await db.characteristics.find_one({"id": size.characteristic_id})
+    if not characteristic:
+        raise HTTPException(status_code=404, detail="Characteristic not found")
+    
+    size_obj = Size(**size.dict())
+    size_data = prepare_for_mongo(size_obj.dict())
+    await db.sizes.insert_one(size_data)
+    return size_obj
+
+@api_router.get("/admin/sizes", response_model=List[Size])
+async def get_sizes(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    sizes = await db.sizes.find().to_list(1000)
+    return [Size(**parse_from_mongo(size)) for size in sizes]
+
+# Pin Code Management Routes
+@api_router.post("/admin/pincodes", response_model=PinCode)
+async def create_pincode(pincode: PinCodeBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Check if pincode already exists
+    existing = await db.pincodes.find_one({"pincode": pincode.pincode})
+    if existing:
+        raise HTTPException(status_code=400, detail="Pin code already exists")
+    
+    pincode_obj = PinCode(**pincode.dict())
+    pincode_data = prepare_for_mongo(pincode_obj.dict())
+    await db.pincodes.insert_one(pincode_data)
+    return pincode_obj
+
+@api_router.get("/admin/pincodes", response_model=List[PinCode])
+async def get_pincodes(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    pincodes = await db.pincodes.find().to_list(1000)
+    return [PinCode(**parse_from_mongo(pc)) for pc in pincodes]
+
+@api_router.put("/admin/pincodes/{pincode_id}")
+async def update_pincode(pincode_id: str, pincode_update: PinCodeBase, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    update_data = prepare_for_mongo(pincode_update.dict())
+    result = await db.pincodes.update_one({"id": pincode_id}, {"$set": update_data})
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Pin code not found")
+    
+    return {"message": "Pin code updated successfully"}
+
+# Customer Management Routes
+@api_router.get("/admin/customers", response_model=List[Customer])
+async def get_customers(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    customers = await db.customers.find().to_list(1000)
+    return [Customer(**parse_from_mongo(customer)) for customer in customers]
+
+@api_router.get("/admin/orders", response_model=List[Order])
+async def get_orders(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    orders = await db.orders.find().to_list(1000)
+    return [Order(**parse_from_mongo(order)) for order in orders]
+
+# Search functionality
+@api_router.get("/admin/search")
+async def search_data(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    product_id: Optional[str] = None,
+    pincode: Optional[str] = None,
+    delivery_person_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Build search query
+    query = {}
+    if start_date and end_date:
+        query["created_at"] = {"$gte": start_date, "$lte": end_date}
+    if delivery_person_id:
+        query["delivery_person_id"] = delivery_person_id
+    
+    # Search in orders and deliveries
+    orders = await db.orders.find(query).to_list(1000)
+    deliveries = await db.deliveries.find(query).to_list(1000)
+    
+    return {
+        "orders": [Order(**parse_from_mongo(order)) for order in orders],
+        "deliveries": [Delivery(**parse_from_mongo(delivery)) for delivery in deliveries]
+    }
+
 # Delivery person routes
 @api_router.get("/delivery-person/profile")
 async def get_profile(current_user: dict = Depends(get_current_user)):
