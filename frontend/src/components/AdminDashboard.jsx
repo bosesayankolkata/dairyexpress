@@ -151,6 +151,21 @@ const AdminDashboard = ({ user, onLogout }) => {
     setNewPerson({ ...newPerson, password });
   };
 
+  const handlePasswordReset = async (person) => {
+    try {
+      const response = await axios.put(`${API}/admin/delivery-persons/${person.id}/reset-password`);
+      setResetPasswordData({
+        name: person.name,
+        phone: person.phone,
+        new_password: response.data.new_password
+      });
+      setShowPasswordDialog(true);
+      toast.success('Password reset successfully');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to reset password');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
