@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Users, Package, Plus, UserPlus, Truck, LogOut, Settings, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import ProductManagement from './ProductManagement';
+import PinCodeManagement from './PinCodeManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
