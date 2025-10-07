@@ -483,6 +483,33 @@ const AdminDashboard = ({ user, onLogout }) => {
             </Card>
           </TabsContent>
 
+          {/* Products Tab */}
+          <TabsContent value="products">
+            <ProductManagement />
+          </TabsContent>
+
+          {/* Pin Codes Tab */}
+          <TabsContent value="pincodes">
+            <PinCodeManagement />
+          </TabsContent>
+
+          {/* Customers Tab */}
+          <TabsContent value="customers">
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Management</CardTitle>
+                <CardDescription>View and manage customer data and orders</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">Customer management coming soon</p>
+                  <p className="text-gray-400 text-sm mt-2">Will be integrated with WhatsApp system</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Delivery Persons Tab */}
           <TabsContent value="persons">
             <Card>
