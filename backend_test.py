@@ -109,8 +109,16 @@ class MilkDeliveryAPITester:
         person_data = {
             "name": "Test Delivery Person",
             "phone": unique_phone,
+            "address": "123 Test Street, Test City",
+            "aadhar_number": "123456789012",
+            "bike_number": "TN01AB1234",
+            "age": 25,
+            "gender": "Male",
+            "blood_group": "O+",
             "pincode": "123456",
-            "password": self.test_password
+            "time_of_work": "5:30 AM - 12:00 PM",
+            "password": self.test_password,
+            "selected_pincodes": ["123456"]
         }
         
         success, response = self.run_test(
