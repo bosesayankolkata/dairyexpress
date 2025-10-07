@@ -54,6 +54,17 @@ class NotDeliveredReason(str, Enum):
     PAYMENT_PROBLEMS = "Problems with payment"
     UNREALISTIC_EXPECTATIONS = "Unrealistic expectations"
 
+class OrderFrequency(str, Enum):
+    ONCE = "once"
+    ALTERNATE_DAY = "alternate_day"
+    DAILY = "daily"
+    CUSTOM = "custom"
+
+class PaymentStatus(str, Enum):
+    PENDING = "pending"
+    SUCCESS = "success"
+    FAILED = "failed"
+
 # Models
 class DeliveryPersonBase(BaseModel):
     name: str
