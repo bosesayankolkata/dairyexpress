@@ -32,7 +32,14 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [newPerson, setNewPerson] = useState({
     name: '',
     phone: '',
+    address: '',
+    aadhar_number: '',
+    bike_number: '',
+    age: 25,
+    gender: '',
+    blood_group: '',
     pincode: '',
+    time_of_work: '',
     password: ''
   });
   
