@@ -583,6 +583,16 @@ const AdminDashboard = ({ user, onLogout }) => {
                             <TableCell>
                               <Badge variant="outline">{personDeliveries.length}</Badge>
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handlePasswordReset(person)}
+                                data-testid={`reset-password-btn-${person.id}`}
+                              >
+                                Reset Password
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
