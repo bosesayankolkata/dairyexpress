@@ -693,7 +693,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </Button>
                         <Button 
                           onClick={handleAddPerson}
-                          disabled={!newPerson.name || !newPerson.phone || !newPerson.pincode || !newPerson.password}
+                          disabled={!newPerson.name || !newPerson.phone || !newPerson.address || !newPerson.aadhar_number || !newPerson.bike_number || !newPerson.gender || !newPerson.pincode || !newPerson.time_of_work || !newPerson.password}
                           data-testid="submit-add-person-btn"
                         >
                           Add Person
