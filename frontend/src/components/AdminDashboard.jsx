@@ -85,7 +85,19 @@ const AdminDashboard = ({ user, onLogout }) => {
       await axios.post(`${API}/admin/delivery-persons`, newPerson);
       toast.success('Delivery person added successfully');
       setShowAddPersonDialog(false);
-      setNewPerson({ name: '', phone: '', pincode: '', password: '' });
+      setNewPerson({
+        name: '',
+        phone: '',
+        address: '',
+        aadhar_number: '',
+        bike_number: '',
+        age: 25,
+        gender: '',
+        blood_group: '',
+        pincode: '',
+        time_of_work: '',
+        password: ''
+      });
       fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to add delivery person');
