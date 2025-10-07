@@ -671,6 +671,60 @@ const AdminDashboard = ({ user, onLogout }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent data-testid="password-reset-dialog">
+          <DialogHeader>
+            <DialogTitle>Password Reset Successful</DialogTitle>
+            <DialogDescription>
+              New login credentials for {resetPasswordData?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4 space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Phone Number (Username):</Label>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-mono text-lg">{resetPasswordData?.phone}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigator.clipboard.writeText(resetPasswordData?.phone)}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium text-gray-700">New Password:</Label>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-mono text-lg text-blue-600 font-bold">{resetPasswordData?.new_password}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigator.clipboard.writeText(resetPasswordData?.new_password)}
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-600 bg-yellow-50 p-3 rounded-lg">
+              <strong>Important:</strong> Share these credentials with the delivery person. They should use their phone number as username and the password above to login.
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button onClick={() => setShowPasswordDialog(false)} className="w-full">
+              Got It
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
