@@ -397,10 +397,8 @@ async def get_delivery_stats(current_user: dict = Depends(get_current_user)):
 # Initialize admin user
 @api_router.post("/init-admin")
 async def init_admin():
-    # Check if admin already exists
-    existing_admin = await db.admins.find_one({})
-    if existing_admin:
-        return {"message": "Admin already exists"}
+    # Delete existing admin and recreate (for dev purposes)
+    await db.admins.delete_many({})
     
     admin_data = {
         "id": str(uuid.uuid4()),
