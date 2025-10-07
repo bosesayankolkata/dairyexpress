@@ -122,10 +122,14 @@ class DeliveryStatsResponse(BaseModel):
 
 # Helper functions
 def hash_password(password: str) -> str:
-    return bcrypt.hash(password)
+    # Ensure password is bytes and truncate if necessary
+    password_bytes = password.encode('utf-8')[:72]
+    return bcrypt.hash(password_bytes.decode('utf-8'))
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.verify(plain_password, hashed_password)
+    # Ensure password is bytes and truncate if necessary
+    password_bytes = plain_password.encode('utf-8')[:72]
+    return bcrypt.verify(password_bytes.decode('utf-8'), hashed_password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
