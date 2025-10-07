@@ -23,6 +23,8 @@ const AdminDashboard = ({ user, onLogout }) => {
   const [showAddDeliveryDialog, setShowAddDeliveryDialog] = useState(false);
   const [showReassignDialog, setShowReassignDialog] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState(null);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [resetPasswordData, setResetPasswordData] = useState(null);
   
   const [newPerson, setNewPerson] = useState({
     name: '',
