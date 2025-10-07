@@ -69,13 +69,131 @@ class PaymentStatus(str, Enum):
 class DeliveryPersonBase(BaseModel):
     name: str
     phone: str
+    address: str
+    aadhar_number: str
+    bike_number: str
+    age: int
+    gender: str
+    blood_group: str
     pincode: str
-
+    time_of_work: str
+    
 class DeliveryPersonCreate(DeliveryPersonBase):
     password: str
+    selected_pincodes: List[str] = []
 
 class DeliveryPerson(DeliveryPersonBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    selected_pincodes: List[str] = []
+    total_deliveries: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Product Management Models
+class CategoryBase(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    is_active: bool = True
+
+class Category(CategoryBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProductTypeBase(BaseModel):
+    name: str
+    category_id: str
+    description: Optional[str] = ""
+    is_active: bool = True
+
+class ProductType(ProductTypeBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CharacteristicBase(BaseModel):
+    name: str
+    product_type_id: str
+    description: Optional[str] = ""
+    is_active: bool = True
+
+class Characteristic(CharacteristicBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SizeBase(BaseModel):
+    name: str
+    value: str  # e.g., "250ml", "500ml", "1L"
+    characteristic_id: str
+    price: float
+    is_active: bool = True
+
+class Size(SizeBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Customer Models
+class CustomerBase(BaseModel):
+    whatsapp_number: str
+    name: str
+    pincode: str
+    address: str
+    landmark: Optional[str] = ""
+
+class Customer(CustomerBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    total_orders: int = 0
+
+# Pin Code Management
+class PinCodeBase(BaseModel):
+    pincode: str
+    area_name: str
+    is_serviceable: bool = True
+
+class PinCode(PinCodeBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    available_time_slots: List[str] = []  # e.g., ["6:00-8:00", "8:00-10:00"]
+    delivery_charge: float = 0.0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Order Models  
+class OrderItemBase(BaseModel):
+    size_id: str
+    quantity: int
+    price_per_unit: float
+    
+class OrderItem(OrderItemBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+class OrderBase(BaseModel):
+    customer_id: str
+    items: List[OrderItem]
+    delivery_date: str
+    delivery_time_slot: str
+    frequency: OrderFrequency
+    subscription_days: Optional[int] = 1
+    total_amount: float
+    payment_status: PaymentStatus = PaymentStatus.PENDING
+    
+class Order(OrderBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    order_number: str
+    delivery_person_id: Optional[str] = None
+    delivery_status: DeliveryStatus = DeliveryStatus.PENDING
+    payment_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Feedback Models
+class FeedbackBase(BaseModel):
+    order_id: str
+    customer_id: str
+    product_rating: int = Field(ge=1, le=5)
+    product_message: Optional[str] = ""
+    delivery_rating: int = Field(ge=1, le=5) 
+    delivery_message: Optional[str] = ""
+
+class Feedback(FeedbackBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    delivery_person_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class DeliveryBase(BaseModel):
