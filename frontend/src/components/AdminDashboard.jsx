@@ -82,7 +82,13 @@ const AdminDashboard = ({ user, onLogout }) => {
 
   const handleAddPerson = async () => {
     try {
-      await axios.post(`${API}/admin/delivery-persons`, newPerson);
+      // Create enhanced delivery person with all fields
+      const enhancedPerson = {
+        ...newPerson,
+        selected_pincodes: [newPerson.pincode] // Add primary pincode to selected pincodes
+      };
+      
+      await axios.post(`${API}/admin/delivery-persons`, enhancedPerson);
       toast.success('Delivery person added successfully');
       setShowAddPersonDialog(false);
       setNewPerson({
