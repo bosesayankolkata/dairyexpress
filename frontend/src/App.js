@@ -35,45 +35,16 @@ export const useAuth = () => {
 
   const login = async (username, password) => {
     try {
-      console.log('Starting login process...');
-      
-      // Use fetch instead of axios to avoid potential axios issues
-      const response = await fetch(`${API}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password
-        })
+      const response = await axios.post(`${API}/login`, {
+        username,
+        password
       });
       
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Error response:', errorData);
-        toast.error('Login failed: ' + response.status);
-        return false;
-      }
-      
-      const data = await response.json();
-      console.log('Login response data:', data);
-      
-      const { access_token, user_type, user_data } = data;
-      
-      if (!access_token || !user_type || !user_data) {
-        console.error('Missing data in response:', data);
-        toast.error('Invalid response from server');
-        return false;
-      }
+      const { access_token, user_type, user_data } = response.data;
       
       localStorage.setItem('token', access_token);
       localStorage.setItem('userData', JSON.stringify(user_data));
       localStorage.setItem('userType', user_type);
-      
-      console.log('Setting user state...');
       
       setUser({
         token: access_token,
@@ -81,17 +52,12 @@ export const useAuth = () => {
         userType: user_type
       });
       
-      // Set axios header for future requests
-      if (typeof axios !== 'undefined') {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-      }
+      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
-      console.log('Login process completed successfully');
       toast.success('Login successful!');
       return true;
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error('Network error: ' + error.message);
+      toast.error(error.response?.data?.detail || 'Login failed');
       return false;
     }
   };
