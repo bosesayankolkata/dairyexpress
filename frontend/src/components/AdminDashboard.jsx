@@ -566,6 +566,7 @@ const AdminDashboard = ({ user, onLogout }) => {
                         <TableHead>Pin Code</TableHead>
                         <TableHead>Created Date</TableHead>
                         <TableHead>Total Deliveries</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
