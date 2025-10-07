@@ -35,16 +35,28 @@ export const useAuth = () => {
 
   const login = async (username, password) => {
     try {
+      console.log('Login attempt with:', { username, password, API });
+      
       const response = await axios.post(`${API}/login`, {
         username,
         password
       });
       
+      console.log('Login response:', response.data);
+      
       const { access_token, user_type, user_data } = response.data;
+      
+      if (!access_token || !user_type || !user_data) {
+        console.error('Missing data in response:', response.data);
+        toast.error('Invalid response from server');
+        return false;
+      }
       
       localStorage.setItem('token', access_token);
       localStorage.setItem('userData', JSON.stringify(user_data));
       localStorage.setItem('userType', user_type);
+      
+      console.log('Setting user state:', { access_token, user_type, user_data });
       
       setUser({
         token: access_token,
@@ -55,8 +67,11 @@ export const useAuth = () => {
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
       
       toast.success('Login successful!');
+      console.log('Login completed successfully');
       return true;
     } catch (error) {
+      console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
       toast.error(error.response?.data?.detail || 'Login failed');
       return false;
     }
