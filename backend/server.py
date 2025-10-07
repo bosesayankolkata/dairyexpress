@@ -353,6 +353,13 @@ async def login(login_request: LoginRequest):
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 # Admin routes
+# Legacy delivery person creation (for backward compatibility)
+class LegacyDeliveryPersonCreate(BaseModel):
+    name: str
+    phone: str
+    pincode: str
+    password: str
+
 @api_router.post("/admin/delivery-persons", response_model=DeliveryPerson)
 async def create_delivery_person(person: DeliveryPersonCreate, current_user: dict = Depends(get_current_user)):
     if current_user["user_type"] != "admin":
@@ -365,7 +372,47 @@ async def create_delivery_person(person: DeliveryPersonCreate, current_user: dic
     
     person_dict = person.dict()
     password_hash = hash_password(person_dict.pop("password"))
-    person_obj = DeliveryPerson(**person_dict)
+    selected_pincodes = person_dict.pop("selected_pincodes", [])
+    
+    person_obj = DeliveryPerson(**person_dict, selected_pincodes=selected_pincodes)
+    person_data = prepare_for_mongo(person_obj.dict())
+    person_data["password_hash"] = password_hash
+    
+    await db.delivery_persons.insert_one(person_data)
+    return person_obj
+
+# Legacy endpoint for simple delivery person creation (backward compatibility)
+@api_router.post("/admin/delivery-persons/simple")
+async def create_simple_delivery_person(person: LegacyDeliveryPersonCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Check if phone already exists
+    existing = await db.delivery_persons.find_one({"phone": person.phone})
+    if existing:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+    
+    # Create with default values for new fields
+    enhanced_person = DeliveryPersonCreate(
+        name=person.name,
+        phone=person.phone,
+        pincode=person.pincode,
+        password=person.password,
+        address="Not provided",
+        aadhar_number="Not provided", 
+        bike_number="Not provided",
+        age=25,
+        gender="Not specified",
+        blood_group="Not specified",
+        time_of_work="Not specified",
+        selected_pincodes=[person.pincode]
+    )
+    
+    person_dict = enhanced_person.dict()
+    password_hash = hash_password(person_dict.pop("password"))
+    selected_pincodes = person_dict.pop("selected_pincodes")
+    
+    person_obj = DeliveryPerson(**person_dict, selected_pincodes=selected_pincodes)
     person_data = prepare_for_mongo(person_obj.dict())
     person_data["password_hash"] = password_hash
     
