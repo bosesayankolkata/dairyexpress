@@ -155,12 +155,34 @@ class MilkDeliveryAPITester:
 
     def test_delivery_person_login(self):
         """Test delivery person login"""
+        # First get the delivery person details to find the phone number
+        if not self.admin_token:
+            self.log_test("Delivery Person Login", False, "No admin token to get person details")
+            return False
+            
+        headers = {'Authorization': f'Bearer {self.admin_token}'}
+        success, persons = self.run_test(
+            "Get Person Details for Login",
+            "GET",
+            "admin/delivery-persons",
+            200,
+            headers=headers
+        )
+        
+        if not success or not persons:
+            self.log_test("Delivery Person Login", False, "Could not get delivery persons list")
+            return False
+            
+        # Try to login with the first person (we'll need to know their password)
+        # For testing, let's try common passwords or create a new person with known password
+        test_phone = getattr(self, 'test_phone', persons[0]['phone'])
+        
         success, response = self.run_test(
             "Delivery Person Login",
             "POST",
             "login",
             200,
-            data={"username": "9876543210", "password": "testpass123"}
+            data={"username": test_phone, "password": "testpass123"}
         )
         if success and 'access_token' in response:
             self.delivery_person_token = response['access_token']
