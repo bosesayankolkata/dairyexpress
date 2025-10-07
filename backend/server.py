@@ -122,7 +122,8 @@ class DeliveryStatsResponse(BaseModel):
 
 # Helper functions
 def hash_password(password: str) -> str:
-    return hashlib.sha256((password + "salt123").encode()).hexdigest()
+    salt = os.environ.get('PASSWORD_SALT', 'fallback-salt-for-dev')
+    return hashlib.sha256((password + salt).encode()).hexdigest()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return hash_password(plain_password) == hashed_password
