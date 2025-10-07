@@ -547,13 +547,103 @@ const AdminDashboard = ({ user, onLogout }) => {
                         </div>
                         
                         <div>
-                          <Label htmlFor="pincode">Pin Code *</Label>
+                          <Label htmlFor="address">Address *</Label>
+                          <Input
+                            value={newPerson.address || ''}
+                            onChange={(e) => setNewPerson({...newPerson, address: e.target.value})}
+                            placeholder="Complete address"
+                            data-testid="person-address-input"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="aadhar">Aadhar Number *</Label>
+                            <Input
+                              value={newPerson.aadhar_number || ''}
+                              onChange={(e) => setNewPerson({...newPerson, aadhar_number: e.target.value})}
+                              placeholder="Aadhar number"
+                              data-testid="person-aadhar-input"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="bike">Bike Number *</Label>
+                            <Input
+                              value={newPerson.bike_number || ''}
+                              onChange={(e) => setNewPerson({...newPerson, bike_number: e.target.value})}
+                              placeholder="Bike registration number"
+                              data-testid="person-bike-input"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label htmlFor="age">Age *</Label>
+                            <Input
+                              type="number"
+                              value={newPerson.age || ''}
+                              onChange={(e) => setNewPerson({...newPerson, age: parseInt(e.target.value) || 0})}
+                              placeholder="Age"
+                              data-testid="person-age-input"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="gender">Gender *</Label>
+                            <Select value={newPerson.gender || ''} onValueChange={(value) => setNewPerson({...newPerson, gender: value})}>
+                              <SelectTrigger data-testid="person-gender-select">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="blood-group">Blood Group</Label>
+                            <Select value={newPerson.blood_group || ''} onValueChange={(value) => setNewPerson({...newPerson, blood_group: value})}>
+                              <SelectTrigger data-testid="person-blood-group-select">
+                                <SelectValue placeholder="Blood group" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="A+">A+</SelectItem>
+                                <SelectItem value="A-">A-</SelectItem>
+                                <SelectItem value="B+">B+</SelectItem>
+                                <SelectItem value="B-">B-</SelectItem>
+                                <SelectItem value="AB+">AB+</SelectItem>
+                                <SelectItem value="AB-">AB-</SelectItem>
+                                <SelectItem value="O+">O+</SelectItem>
+                                <SelectItem value="O-">O-</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="pincode">Working Pin Code *</Label>
                           <Input
                             value={newPerson.pincode}
                             onChange={(e) => setNewPerson({...newPerson, pincode: e.target.value})}
-                            placeholder="Location pin code"
+                            placeholder="Primary working area pin code"
                             data-testid="person-pincode-input"
                           />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="time-of-work">Work Hours *</Label>
+                          <Select value={newPerson.time_of_work || ''} onValueChange={(value) => setNewPerson({...newPerson, time_of_work: value})}>
+                            <SelectTrigger data-testid="person-time-of-work-select">
+                              <SelectValue placeholder="Select work hours" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5:30 AM - 12:00 PM">Morning Shift (5:30 AM - 12:00 PM)</SelectItem>
+                              <SelectItem value="12:00 PM - 6:00 PM">Afternoon Shift (12:00 PM - 6:00 PM)</SelectItem>
+                              <SelectItem value="6:00 PM - 10:00 PM">Evening Shift (6:00 PM - 10:00 PM)</SelectItem>
+                              <SelectItem value="5:30 AM - 10:00 PM">Full Day (5:30 AM - 10:00 PM)</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div>
