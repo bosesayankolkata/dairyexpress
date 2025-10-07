@@ -35,19 +35,36 @@ export const useAuth = () => {
 
   const login = async (username, password) => {
     try {
-      console.log('Login attempt with:', { username, password, API });
+      console.log('Starting login process...');
       
-      const response = await axios.post(`${API}/login`, {
-        username,
-        password
+      // Use fetch instead of axios to avoid potential axios issues
+      const response = await fetch(`${API}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
       });
       
-      console.log('Login response:', response.data);
+      console.log('Response status:', response.status);
       
-      const { access_token, user_type, user_data } = response.data;
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        toast.error('Login failed: ' + response.status);
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log('Login response data:', data);
+      
+      const { access_token, user_type, user_data } = data;
       
       if (!access_token || !user_type || !user_data) {
-        console.error('Missing data in response:', response.data);
+        console.error('Missing data in response:', data);
         toast.error('Invalid response from server');
         return false;
       }
@@ -56,7 +73,7 @@ export const useAuth = () => {
       localStorage.setItem('userData', JSON.stringify(user_data));
       localStorage.setItem('userType', user_type);
       
-      console.log('Setting user state:', { access_token, user_type, user_data });
+      console.log('Setting user state...');
       
       setUser({
         token: access_token,
@@ -64,15 +81,17 @@ export const useAuth = () => {
         userType: user_type
       });
       
-      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      // Set axios header for future requests
+      if (typeof axios !== 'undefined') {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      }
       
+      console.log('Login process completed successfully');
       toast.success('Login successful!');
-      console.log('Login completed successfully');
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      console.error('Error response:', error.response?.data);
-      toast.error(error.response?.data?.detail || 'Login failed');
+      toast.error('Network error: ' + error.message);
       return false;
     }
   };
