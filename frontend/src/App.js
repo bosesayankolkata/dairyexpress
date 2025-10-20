@@ -141,6 +141,10 @@ function App() {
             }
           />
           <Route
+            path="/mock-payment"
+            element={<MockPayment />}
+          />
+          <Route
             path="/"
             element={
               auth.user ? (
