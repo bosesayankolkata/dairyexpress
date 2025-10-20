@@ -1606,8 +1606,11 @@ async def handle_quantity_frequency_selection(db, phone_number: str, message: st
         "7": {"quantity": 0, "frequency": "custom", "price": 0, "name": "Custom"}
     }
     
-    if message.strip() in frequency_options:
-        selected = frequency_options[message.strip()]
+    message_clean = message.strip()
+    print(f"DEBUG: Frequency selection - received: '{message_clean}', available options: {list(frequency_options.keys())}")
+    
+    if message_clean in frequency_options:
+        selected = frequency_options[message_clean]
         
         conversation_data = customer.conversation_data
         conversation_data["selected_quantity"] = selected["quantity"]
@@ -1622,7 +1625,9 @@ async def handle_quantity_frequency_selection(db, phone_number: str, message: st
         
         return await show_delivery_slots()
     else:
-        return """Please select a valid option (1-7).
+        return f"""I received: "{message_clean}"
+        
+Please select a valid option (1-7).
 
 📱 Type *Back* to go to previous step"""
 
