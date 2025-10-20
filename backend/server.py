@@ -1308,6 +1308,85 @@ async def show_order_confirmation(conversation_data: dict):
 
 Reply *CONFIRM* to proceed to payment or *CANCEL* to start over."""
 
+async def handle_order_confirmation(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle order confirmation"""
+    message_lower = message.lower().strip()
+    
+    if message_lower == "confirm":
+        # Create order in database
+        conversation_data = customer.conversation_data
+        
+        # Create customer if not exists
+        customer_data = {
+            "whatsapp_number": phone_number,
+            "name": conversation_data.get("customer_name", ""),
+            "pincode": conversation_data.get("delivery_pincode", ""),
+            "address": conversation_data.get("delivery_address", ""),
+            "landmark": ""
+        }
+        
+        # Check if customer already exists
+        existing_customer = await db.customers.find_one({"whatsapp_number": phone_number})
+        if not existing_customer:
+            customer_obj = Customer(**customer_data)
+            customer_mongo_data = prepare_for_mongo(customer_obj.dict())
+            await db.customers.insert_one(customer_mongo_data)
+            customer_id = customer_obj.id
+        else:
+            customer_id = existing_customer["id"]
+        
+        # Create order
+        order_data = {
+            "customer_id": customer_id,
+            "items": [{
+                "size_id": conversation_data.get("selected_size_id"),
+                "quantity": conversation_data.get("selected_quantity", 1),
+                "price_per_unit": conversation_data.get("selected_size_price", 0)
+            }],
+            "delivery_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "delivery_time_slot": "6:00-8:00",
+            "frequency": OrderFrequency.ONCE,  # Will be updated based on selection
+            "total_amount": conversation_data.get("final_total", 0),
+            "payment_status": PaymentStatus.PENDING,
+            "order_number": f"ORD{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        }
+        
+        order_obj = Order(**order_data)
+        order_mongo_data = prepare_for_mongo(order_obj.dict())
+        await db.orders.insert_one(order_mongo_data)
+        
+        # Reset customer conversation
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "welcome",
+            "conversation_data": {}
+        })
+        
+        return f"""✅ *ORDER CONFIRMED!*
+
+📝 Order Number: {order_data['order_number']}
+💰 Amount: ₹{conversation_data.get('final_total', 0):.2f}
+
+💳 *Payment Link:* (Razorpay integration coming soon)
+
+📞 For any queries, contact: +91 90075 09919
+
+Thank you for choosing Fresh Dairy! 🥛"""
+        
+    elif message_lower == "cancel":
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "welcome",
+            "conversation_data": {}
+        })
+        
+        return """❌ *Order cancelled.*
+
+No worries! Type *Hi* whenever you want to place an order. 
+
+We're here to serve you fresh dairy products! 🥛"""
+        
+    else:
+        return "Please reply *CONFIRM* to confirm your order or *CANCEL* to cancel."
+
 async def show_existing_customer_menu(db, customer: WhatsAppCustomer):
     """Show menu for existing customers"""
     # Get customer's previous orders (implement based on your order history)
