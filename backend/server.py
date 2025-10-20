@@ -1855,18 +1855,25 @@ async def handle_self_service_menu(db, phone_number: str, message: str, customer
 📱 Type *Back* to go to main menu"""
 
 async def show_existing_customer_menu(db, customer: WhatsAppCustomer):
-    """Show menu for existing customers"""
-    # Get customer's previous orders (implement based on your order history)
-    return """👋 *Welcome back!*
+    """Show menu for existing customers with self-service options"""
+    return """👋 *Welcome back to Fresh Dairy!*
 
-What would you like to do?
-
+🛒 *Quick Actions:*
 1️⃣ *Repeat last order*
-2️⃣ *Modify existing subscription*
-3️⃣ *Change delivery address*
-4️⃣ *New order*
+2️⃣ *New order*
 
-Please reply with the number of your choice."""
+📋 *Manage Subscription:*
+3️⃣ *Pause subscription*
+4️⃣ *Skip tomorrow's delivery*
+5️⃣ *Change quantity*
+6️⃣ *Cancel subscription*
+
+⚙️ *Account Settings:*
+7️⃣ *Change delivery address*
+8️⃣ *View order history*
+
+📱 Reply with the number of your choice
+🔙 Type *Back* to go to welcome message"""
 
 # WhatsApp Webhook Route
 @api_router.post("/whatsapp")
