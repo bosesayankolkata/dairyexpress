@@ -2017,6 +2017,90 @@ async def send_whatsapp_admin(
     result = await send_whatsapp_message(message_data.chat_id, message_data.text)
     return {"success": result is not None, "result": result}
 
+# Payment Routes
+@api_router.post("/payment/webhook")
+async def payment_webhook(request: dict):
+    """Handle Razorpay payment webhook"""
+    try:
+        event = request.get("event", "")
+        payment_data = request.get("payload", {}).get("payment", {})
+        
+        if event == "payment.captured":
+            order_id = payment_data.get("order_id", "")
+            payment_id = payment_data.get("id", "")
+            
+            await handle_payment_success(db, order_id, payment_id)
+            
+            # Send WhatsApp confirmation
+            # Get customer phone from order
+            order = await db.orders.find_one({"razorpay_order_id": order_id})
+            if order:
+                customer = await db.customers.find_one({"id": order["customer_id"]})
+                if customer:
+                    confirmation_msg = f"""✅ *PAYMENT SUCCESSFUL!*
+
+📝 Order: {order['order_number']}
+💰 Amount: ₹{order['total_amount']:.2f}
+
+🚚 Your order is confirmed and will be delivered as scheduled.
+
+📞 Contact: +91 90075 09919
+Thank you for choosing Fresh Dairy! 🥛"""
+                    
+                    await send_whatsapp_message(customer["whatsapp_number"], confirmation_msg)
+        
+        elif event == "payment.failed":
+            order_id = payment_data.get("order_id", "")
+            await handle_payment_failure(db, order_id, "Payment failed")
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        print(f"Payment webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@api_router.get("/mock-payment")
+async def mock_payment_page(order: str, amount: float):
+    """Mock payment page for testing"""
+    return {
+        "message": "Mock Payment Page",
+        "order_id": order,
+        "amount": amount,
+        "instruction": "This is a mock payment. In production, this will be Razorpay payment page.",
+        "test_links": {
+            "success": f"/payment-success?order={order}&status=success",
+            "failure": f"/payment-success?order={order}&status=failed"
+        }
+    }
+
+@api_router.get("/payment-success")
+async def payment_success(order: str, status: str = "success"):
+    """Handle payment success/failure callback"""
+    
+    if status == "success":
+        await handle_payment_success(db, order)
+        return {
+            "status": "success",
+            "message": "Payment successful! You will receive order confirmation on WhatsApp.",
+            "order_id": order
+        }
+    else:
+        await handle_payment_failure(db, order)
+        return {
+            "status": "failed", 
+            "message": "Payment failed. Please try again or contact support.",
+            "order_id": order
+        }
+
+# Payment management for admin
+@api_router.get("/admin/payments")
+async def get_payments(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    payments = await db.payments.find().to_list(1000)
+    return [Payment(**parse_from_mongo(payment)) for payment in payments]
+
 # Initialize admin user
 @api_router.post("/init-admin")
 async def init_admin():
