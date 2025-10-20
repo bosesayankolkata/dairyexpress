@@ -902,6 +902,10 @@ _Type "Back" anytime to go to the previous step_"""
 
 📱 Type *Back* to return to welcome message"""
     
+    # Existing customer menu
+    elif current_step == "existing_menu":
+        return await handle_existing_customer_menu(db, phone_number, message, customer)
+    
     # Capture location
     elif current_step == "capture_location":
         return await handle_location_capture(db, phone_number, message, customer)
