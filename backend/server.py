@@ -1868,6 +1868,64 @@ async def show_existing_customer_menu(db, customer: WhatsAppCustomer):
 5️⃣ *Change quantity*
 6️⃣ *Cancel subscription*
 
+async def handle_existing_customer_menu(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle existing customer menu selections"""
+    choice = message.strip()
+    
+    if choice == "1":  # Repeat last order
+        return """🔄 *Repeat Last Order*
+
+Your last order:
+🥛 Fresh Milk - Full Cream (500ml) x 2
+📅 Daily delivery
+💰 ₹60/day
+
+Reply *CONFIRM* to repeat this order or *BACK* to return to menu."""
+    
+    elif choice == "2":  # New order
+        await update_whatsapp_customer(db, phone_number, {"current_step": "capture_location"})
+        return await capture_location_request()
+    
+    elif choice == "3":  # Pause subscription
+        return await handle_self_service(db, phone_number, "pause", customer)
+    
+    elif choice == "4":  # Skip tomorrow
+        return await handle_self_service(db, phone_number, "skip tomorrow", customer)
+    
+    elif choice == "5":  # Change quantity
+        return await handle_self_service(db, phone_number, "change qty", customer)
+    
+    elif choice == "6":  # Cancel subscription
+        return await handle_self_service(db, phone_number, "cancel subscription", customer)
+    
+    elif choice == "7":  # Change address
+        await update_whatsapp_customer(db, phone_number, {"current_step": "collect_address"})
+        return """📝 *Update Delivery Address*
+
+Please provide your new complete delivery address:
+
+Include:
+• House/Flat number
+• Street name
+• Landmark  
+• Area
+
+📱 Type *Back* to return to menu"""
+    
+    elif choice == "8":  # Order history
+        return """📊 *Order History*
+
+Recent orders:
+1. 15 Dec - Fresh Milk 500ml x2 - ₹60 ✅
+2. 14 Dec - Fresh Milk 500ml x2 - ₹60 ✅  
+3. 13 Dec - Fresh Milk 500ml x2 - ₹60 ✅
+
+📱 Type *Back* to return to menu"""
+    
+    else:
+        return """❌ Please select a valid option (1-8).
+
+📱 Type *Back* to go to previous step"""
 ⚙️ *Account Settings:*
 7️⃣ *Change delivery address*
 8️⃣ *View order history*
