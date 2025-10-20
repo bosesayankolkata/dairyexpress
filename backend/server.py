@@ -964,6 +964,10 @@ _Type "Back" anytime to go to the previous step_"""
     elif current_step == "collect_name":
         return await handle_name_collection(db, phone_number, message, customer)
     
+    # Handle frequency (old workflow compatibility)
+    elif current_step == "select_frequency":
+        return await handle_frequency_selection(db, phone_number, message, customer)
+    
     # Handle order confirmation
     elif current_step == "confirm_order":
         return await handle_order_confirmation(db, phone_number, message, customer)
