@@ -676,6 +676,24 @@ async def get_orders(current_user: dict = Depends(get_current_user)):
     orders = await db.orders.find().to_list(1000)
     return [Order(**parse_from_mongo(order)) for order in orders]
 
+# WhatsApp Customer Management Routes
+@api_router.get("/admin/whatsapp-customers")
+async def get_whatsapp_customers(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    customers = await db.whatsapp_customers.find().to_list(1000)
+    return [WhatsAppCustomer(**parse_from_mongo(customer)) for customer in customers]
+
+@api_router.get("/admin/whatsapp-orders") 
+async def get_whatsapp_orders(current_user: dict = Depends(get_current_user)):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get orders from WhatsApp customers
+    whatsapp_orders = await db.orders.find().to_list(1000)
+    return [Order(**parse_from_mongo(order)) for order in whatsapp_orders]
+
 # Search functionality
 @api_router.get("/admin/search")
 async def search_data(
