@@ -1622,7 +1622,7 @@ async def handle_quantity_frequency_selection(db, phone_number: str, message: st
         
         return await show_delivery_slots()
     else:
-        return f"""Please select a valid option (1-7).
+        return """Please select a valid option (1-7).
 
 📱 Type *Back* to go to previous step"""
 
