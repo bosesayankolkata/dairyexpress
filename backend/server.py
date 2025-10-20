@@ -1872,6 +1872,13 @@ async def show_existing_customer_menu(db, customer: WhatsAppCustomer):
 5️⃣ *Change quantity*
 6️⃣ *Cancel subscription*
 
+⚙️ *Account Settings:*
+7️⃣ *Change delivery address*
+8️⃣ *View order history*
+
+📱 Reply with the number of your choice
+🔙 Type *Back* to go to welcome message"""
+
 async def handle_existing_customer_menu(db, phone_number: str, message: str, customer: WhatsAppCustomer):
     """Handle existing customer menu selections"""
     choice = message.strip()
