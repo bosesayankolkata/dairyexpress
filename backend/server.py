@@ -1542,16 +1542,35 @@ async def handle_order_confirmation(db, phone_number: str, message: str, custome
             "conversation_data": {}
         })
         
+        # Create payment link
+        customer_payment_data = {
+            "name": conversation_data.get("customer_name", "Customer"),
+            "phone": phone_number
+        }
+        
+        payment_link = await create_payment_link(
+            db, 
+            order_data['order_number'], 
+            conversation_data.get("final_total", 0),
+            customer_payment_data
+        )
+        
+        payment_status = "🔗 *Click to Pay*" if RAZORPAY_ENABLED else "🧪 *Test Payment*"
+        
         return f"""✅ *ORDER CONFIRMED!*
 
 📝 Order Number: {order_data['order_number']}
 💰 Amount: ₹{conversation_data.get('final_total', 0):.2f}
 
-💳 *Payment Link:* (Razorpay integration coming soon)
+💳 *Payment Link:*
+{payment_link}
+{payment_status}
 
 📞 For any queries, contact: +91 90075 09919
 
-Thank you for choosing Fresh Dairy! 🥛"""
+Thank you for choosing Fresh Dairy! 🥛
+
+_After payment, you'll receive confirmation and delivery details._"""
         
     elif message_lower == "cancel":
         await update_whatsapp_customer(db, phone_number, {
