@@ -299,12 +299,13 @@ const AdminDashboard = ({ user, onLogout }) => {
         </div>
 
         <Tabs defaultValue="deliveries" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-full max-w-4xl">
+          <TabsList className="grid w-full grid-cols-6 lg:w-full max-w-5xl">
             <TabsTrigger value="deliveries" data-testid="admin-deliveries-tab">Deliveries</TabsTrigger>
             <TabsTrigger value="persons" data-testid="admin-persons-tab">Delivery Persons</TabsTrigger>
             <TabsTrigger value="products" data-testid="admin-products-tab">Products</TabsTrigger>
             <TabsTrigger value="pincodes" data-testid="admin-pincodes-tab">Pin Codes</TabsTrigger>
             <TabsTrigger value="customers" data-testid="admin-customers-tab">Customers</TabsTrigger>
+            <TabsTrigger value="whatsapp" data-testid="admin-whatsapp-tab">WhatsApp</TabsTrigger>
           </TabsList>
 
           {/* Deliveries Tab */}
