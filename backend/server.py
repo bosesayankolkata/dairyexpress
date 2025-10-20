@@ -782,6 +782,583 @@ async def get_delivery_stats(current_user: dict = Depends(get_current_user)):
         daily_stats=daily_stats
     )
 
+# WhatsApp Integration with whapi.cloud
+import httpx
+from typing import Dict, Any
+
+# WhatsApp Configuration
+WHAPI_API_URL = "https://gate.whapi.cloud"
+WHAPI_TOKEN = "4NtJEaPI6sZSAzNKJlLKkZ3fAANcTNeJ"
+WHATSAPP_PHONE = "+91 90075 09919"
+
+# WhatsApp Models
+class WhatsAppMessage(BaseModel):
+    chat_id: str
+    text: str
+    
+class IncomingWhatsAppMessage(BaseModel):
+    messages: List[Dict[str, Any]]
+
+class WhatsAppCustomer(BaseModel):
+    whatsapp_number: str
+    name: Optional[str] = ""
+    current_step: str = "welcome"
+    conversation_data: Dict[str, Any] = {}
+    orders: List[str] = []
+
+# WhatsApp helper functions
+async def send_whatsapp_message(phone_number: str, message: str):
+    """Send WhatsApp message via whapi.cloud"""
+    try:
+        headers = {
+            "Authorization": f"Bearer {WHAPI_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        
+        # Remove country code formatting if present
+        clean_phone = phone_number.replace("+", "").replace("-", "").replace(" ", "")
+        
+        payload = {
+            "typing_time": 0,
+            "to": f"{clean_phone}@s.whatsapp.net",
+            "body": message
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{WHAPI_API_URL}/messages/text",
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+        return response.json() if response.status_code == 200 else None
+        
+    except Exception as e:
+        print(f"WhatsApp send error: {e}")
+        return None
+
+async def get_or_create_whatsapp_customer(db, phone_number: str) -> WhatsAppCustomer:
+    """Get existing WhatsApp customer or create new one"""
+    customer = await db.whatsapp_customers.find_one({"whatsapp_number": phone_number})
+    
+    if not customer:
+        customer_data = WhatsAppCustomer(
+            whatsapp_number=phone_number,
+            current_step="welcome",
+            conversation_data={}
+        ).dict()
+        
+        await db.whatsapp_customers.insert_one(customer_data)
+        return WhatsAppCustomer(**customer_data)
+    
+    return WhatsAppCustomer(**parse_from_mongo(customer))
+
+async def update_whatsapp_customer(db, phone_number: str, data: dict):
+    """Update WhatsApp customer data"""
+    await db.whatsapp_customers.update_one(
+        {"whatsapp_number": phone_number},
+        {"$set": data}
+    )
+
+async def process_whatsapp_message(db, phone_number: str, message: str) -> str:
+    """Process incoming WhatsApp message and generate response"""
+    
+    customer = await get_or_create_whatsapp_customer(db, phone_number)
+    current_step = customer.current_step
+    message_lower = message.lower().strip()
+    
+    # Welcome message
+    if current_step == "welcome" or message_lower in ["hi", "hello", "hey", "start"]:
+        await update_whatsapp_customer(db, phone_number, {"current_step": "customer_type"})
+        return """🥛 *Welcome to Fresh Dairy!* 🥛
+
+Are you a:
+1️⃣ *New Customer*
+2️⃣ *Existing Customer*
+
+Please reply with *1* for New Customer or *2* for Existing Customer."""
+
+    # Customer type selection
+    elif current_step == "customer_type":
+        if message_lower in ["1", "new", "new customer"]:
+            await update_whatsapp_customer(db, phone_number, {"current_step": "show_categories"})
+            return await show_product_categories(db)
+        elif message_lower in ["2", "existing", "existing customer"]:
+            await update_whatsapp_customer(db, phone_number, {"current_step": "existing_menu"})
+            return await show_existing_customer_menu(db, customer)
+        else:
+            return "Please reply with *1* for New Customer or *2* for Existing Customer."
+    
+    # Show product categories
+    elif current_step == "show_categories":
+        return await handle_category_selection(db, phone_number, message, customer)
+    
+    # Handle product types
+    elif current_step == "show_product_types":
+        return await handle_product_type_selection(db, phone_number, message, customer)
+    
+    # Handle characteristics
+    elif current_step == "show_characteristics":
+        return await handle_characteristic_selection(db, phone_number, message, customer)
+    
+    # Handle sizes
+    elif current_step == "show_sizes":
+        return await handle_size_selection(db, phone_number, message, customer)
+    
+    # Handle quantity
+    elif current_step == "select_quantity":
+        return await handle_quantity_selection(db, phone_number, message, customer)
+    
+    # Handle pincode
+    elif current_step == "check_pincode":
+        return await handle_pincode_check(db, phone_number, message, customer)
+    
+    # Handle address
+    elif current_step == "collect_address":
+        return await handle_address_collection(db, phone_number, message, customer)
+    
+    # Handle frequency
+    elif current_step == "select_frequency":
+        return await handle_frequency_selection(db, phone_number, message, customer)
+    
+    # Default fallback
+    else:
+        await update_whatsapp_customer(db, phone_number, {"current_step": "welcome"})
+        return """I didn't understand that. Let me help you start over.
+
+Type *Hi* to begin ordering! 🥛"""
+
+async def show_product_categories(db):
+    """Show available product categories"""
+    categories = await db.categories.find({"is_active": True}).to_list(100)
+    
+    if not categories:
+        return "Sorry, no products are currently available. Please contact support."
+    
+    message = "🛒 *Please select a product category:*\n\n"
+    for i, category in enumerate(categories, 1):
+        message += f"{i}️⃣ *{category['name']}*\n"
+        if category.get('description'):
+            message += f"   _{category['description']}_\n"
+        message += "\n"
+    
+    message += "Please reply with the number of your choice."
+    return message
+
+async def handle_category_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle category selection"""
+    try:
+        categories = await db.categories.find({"is_active": True}).to_list(100)
+        selected_index = int(message) - 1
+        
+        if 0 <= selected_index < len(categories):
+            selected_category = categories[selected_index]
+            
+            # Update customer data
+            conversation_data = customer.conversation_data
+            conversation_data["selected_category_id"] = selected_category["id"]
+            conversation_data["selected_category_name"] = selected_category["name"]
+            
+            await update_whatsapp_customer(db, phone_number, {
+                "current_step": "show_product_types",
+                "conversation_data": conversation_data
+            })
+            
+            return await show_product_types(db, selected_category["id"])
+        else:
+            return f"Please select a valid option (1-{len(categories)})."
+            
+    except ValueError:
+        return "Please reply with a number to select a category."
+
+async def show_product_types(db, category_id: str):
+    """Show product types for selected category"""
+    product_types = await db.product_types.find({
+        "category_id": category_id,
+        "is_active": True
+    }).to_list(100)
+    
+    if not product_types:
+        return "No product types available for this category."
+    
+    message = "📝 *Please select a product type:*\n\n"
+    for i, ptype in enumerate(product_types, 1):
+        message += f"{i}️⃣ *{ptype['name']}*\n"
+        if ptype.get('description'):
+            message += f"   _{ptype['description']}_\n"
+        message += "\n"
+    
+    message += "Please reply with the number of your choice."
+    return message
+
+async def handle_product_type_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle product type selection"""
+    try:
+        category_id = customer.conversation_data.get("selected_category_id")
+        product_types = await db.product_types.find({
+            "category_id": category_id,
+            "is_active": True
+        }).to_list(100)
+        
+        selected_index = int(message) - 1
+        
+        if 0 <= selected_index < len(product_types):
+            selected_type = product_types[selected_index]
+            
+            conversation_data = customer.conversation_data
+            conversation_data["selected_product_type_id"] = selected_type["id"]
+            conversation_data["selected_product_type_name"] = selected_type["name"]
+            
+            await update_whatsapp_customer(db, phone_number, {
+                "current_step": "show_characteristics", 
+                "conversation_data": conversation_data
+            })
+            
+            return await show_characteristics(db, selected_type["id"])
+        else:
+            return f"Please select a valid option (1-{len(product_types)})."
+            
+    except ValueError:
+        return "Please reply with a number to select a product type."
+
+async def show_characteristics(db, product_type_id: str):
+    """Show characteristics for selected product type"""
+    characteristics = await db.characteristics.find({
+        "product_type_id": product_type_id,
+        "is_active": True
+    }).to_list(100)
+    
+    if not characteristics:
+        return "No characteristics available for this product type."
+    
+    message = "✨ *Please select product characteristics:*\n\n"
+    for i, char in enumerate(characteristics, 1):
+        message += f"{i}️⃣ *{char['name']}*\n"
+        if char.get('description'):
+            message += f"   _{char['description']}_\n"
+        message += "\n"
+    
+    message += "Please reply with the number of your choice."
+    return message
+
+async def handle_characteristic_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle characteristic selection"""
+    try:
+        product_type_id = customer.conversation_data.get("selected_product_type_id")
+        characteristics = await db.characteristics.find({
+            "product_type_id": product_type_id,
+            "is_active": True
+        }).to_list(100)
+        
+        selected_index = int(message) - 1
+        
+        if 0 <= selected_index < len(characteristics):
+            selected_char = characteristics[selected_index]
+            
+            conversation_data = customer.conversation_data
+            conversation_data["selected_characteristic_id"] = selected_char["id"]
+            conversation_data["selected_characteristic_name"] = selected_char["name"]
+            
+            await update_whatsapp_customer(db, phone_number, {
+                "current_step": "show_sizes",
+                "conversation_data": conversation_data
+            })
+            
+            return await show_sizes(db, selected_char["id"])
+        else:
+            return f"Please select a valid option (1-{len(characteristics)})."
+            
+    except ValueError:
+        return "Please reply with a number to select characteristics."
+
+async def show_sizes(db, characteristic_id: str):
+    """Show sizes and prices for selected characteristic"""
+    sizes = await db.sizes.find({
+        "characteristic_id": characteristic_id,
+        "is_active": True
+    }).to_list(100)
+    
+    if not sizes:
+        return "No sizes available for this product."
+    
+    message = "📏 *Please select a size:*\n\n"
+    for i, size in enumerate(sizes, 1):
+        message += f"{i}️⃣ *{size['name']} ({size['value']})*\n"
+        message += f"   💰 ₹{size['price']:.2f}\n\n"
+    
+    message += "Please reply with the number of your choice."
+    return message
+
+async def handle_size_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle size selection"""
+    try:
+        characteristic_id = customer.conversation_data.get("selected_characteristic_id")
+        sizes = await db.sizes.find({
+            "characteristic_id": characteristic_id,
+            "is_active": True
+        }).to_list(100)
+        
+        selected_index = int(message) - 1
+        
+        if 0 <= selected_index < len(sizes):
+            selected_size = sizes[selected_index]
+            
+            conversation_data = customer.conversation_data
+            conversation_data["selected_size_id"] = selected_size["id"]
+            conversation_data["selected_size_name"] = selected_size["name"]
+            conversation_data["selected_size_value"] = selected_size["value"]
+            conversation_data["selected_size_price"] = selected_size["price"]
+            
+            await update_whatsapp_customer(db, phone_number, {
+                "current_step": "select_quantity",
+                "conversation_data": conversation_data
+            })
+            
+            return f"""📦 *Selected: {selected_size['name']} ({selected_size['value']})*
+💰 Price: ₹{selected_size['price']:.2f}
+
+🔢 *How many units do you want?*
+
+Please enter the quantity (e.g., 1, 2, 3, etc.)"""
+        else:
+            return f"Please select a valid option (1-{len(sizes)})."
+            
+    except ValueError:
+        return "Please reply with a number to select a size."
+
+async def handle_quantity_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle quantity selection"""
+    try:
+        quantity = int(message)
+        
+        if quantity <= 0:
+            return "Please enter a valid quantity (1 or more)."
+        
+        conversation_data = customer.conversation_data
+        conversation_data["selected_quantity"] = quantity
+        
+        # Calculate total
+        price = conversation_data.get("selected_size_price", 0)
+        total = price * quantity
+        conversation_data["total_amount"] = total
+        
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "check_pincode",
+            "conversation_data": conversation_data
+        })
+        
+        return f"""✅ *Order Summary:*
+📦 {conversation_data.get('selected_category_name')} - {conversation_data.get('selected_product_type_name')}
+🏷️ {conversation_data.get('selected_characteristic_name')}
+📏 {conversation_data.get('selected_size_name')} ({conversation_data.get('selected_size_value')})
+🔢 Quantity: {quantity}
+💰 Total: ₹{total:.2f}
+
+📍 *Please enter your PIN CODE for delivery availability check:*"""
+        
+    except ValueError:
+        return "Please enter a valid number for quantity."
+
+async def handle_pincode_check(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle pincode validation"""
+    pincode = message.strip()
+    
+    # Check if pincode is serviceable
+    pincode_data = await db.pincodes.find_one({
+        "pincode": pincode,
+        "is_serviceable": True
+    })
+    
+    if not pincode_data:
+        await update_whatsapp_customer(db, phone_number, {"current_step": "welcome"})
+        return f"""❌ *Sorry, we don't deliver to {pincode} yet.*
+
+We're working to expand our delivery areas. Please try again in the future!
+
+Type *Hi* to start a new order for a different location."""
+    
+    conversation_data = customer.conversation_data
+    conversation_data["delivery_pincode"] = pincode
+    conversation_data["delivery_area"] = pincode_data.get("area_name", "")
+    
+    # Show available time slots
+    time_slots = pincode_data.get("available_time_slots", [])
+    time_slots_text = "\n".join([f"⏰ {slot}" for slot in time_slots]) if time_slots else "⏰ Standard delivery hours"
+    
+    await update_whatsapp_customer(db, phone_number, {
+        "current_step": "collect_address",
+        "conversation_data": conversation_data
+    })
+    
+    return f"""✅ *Great! We deliver to {pincode}*
+📍 Area: {pincode_data.get('area_name', pincode)}
+
+🕐 *Available Time Slots:*
+{time_slots_text}
+
+📝 *Please provide your complete delivery address:*
+(Include house/flat number, street, landmark)"""
+
+async def handle_address_collection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle address collection"""
+    address = message.strip()
+    
+    if len(address) < 10:
+        return "Please provide a more detailed address including house number, street, and landmark."
+    
+    conversation_data = customer.conversation_data
+    conversation_data["delivery_address"] = address
+    
+    await update_whatsapp_customer(db, phone_number, {
+        "current_step": "collect_name",
+        "conversation_data": conversation_data
+    })
+    
+    return "👤 *What's your name?*\n\nPlease provide your full name for the delivery."
+
+async def handle_name_collection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle customer name collection"""
+    name = message.strip()
+    
+    if len(name) < 2:
+        return "Please provide your full name."
+    
+    conversation_data = customer.conversation_data
+    conversation_data["customer_name"] = name
+    
+    await update_whatsapp_customer(db, phone_number, {
+        "current_step": "select_frequency",
+        "conversation_data": conversation_data
+    })
+    
+    return await show_frequency_options()
+
+async def show_frequency_options():
+    """Show delivery frequency options"""
+    return """🔄 *How frequently do you need this product?*
+
+1️⃣ *Once* - One time delivery
+2️⃣ *Every alternate day* (30 days subscription)
+3️⃣ *Every day* (30 days subscription)  
+4️⃣ *Custom* (Select specific dates for 30 days)
+
+Please reply with the number of your choice."""
+
+async def handle_frequency_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle delivery frequency selection"""
+    frequency_map = {
+        "1": {"type": "once", "name": "One time delivery", "days": 1},
+        "2": {"type": "alternate_day", "name": "Every alternate day", "days": 30}, 
+        "3": {"type": "daily", "name": "Every day", "days": 30},
+        "4": {"type": "custom", "name": "Custom schedule", "days": 30}
+    }
+    
+    if message.strip() in frequency_map:
+        frequency = frequency_map[message.strip()]
+        
+        conversation_data = customer.conversation_data
+        conversation_data["delivery_frequency"] = frequency
+        
+        # Calculate final amount based on frequency
+        base_amount = conversation_data.get("total_amount", 0)
+        if frequency["type"] == "alternate_day":
+            total_amount = base_amount * 15  # 15 deliveries in 30 days
+        elif frequency["type"] == "daily":
+            total_amount = base_amount * 30  # 30 deliveries
+        elif frequency["type"] == "custom":
+            total_amount = base_amount * 20  # Estimate 20 deliveries
+        else:
+            total_amount = base_amount
+            
+        conversation_data["final_total"] = total_amount
+        
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "confirm_order",
+            "conversation_data": conversation_data
+        })
+        
+        return await show_order_confirmation(conversation_data)
+    else:
+        return "Please select a valid option (1, 2, 3, or 4)."
+
+async def show_order_confirmation(conversation_data: dict):
+    """Show final order confirmation"""
+    frequency = conversation_data.get("delivery_frequency", {})
+    
+    return f"""📋 *ORDER CONFIRMATION*
+
+👤 Name: {conversation_data.get('customer_name')}
+📦 Product: {conversation_data.get('selected_category_name')} - {conversation_data.get('selected_product_type_name')}
+🏷️ Type: {conversation_data.get('selected_characteristic_name')}
+📏 Size: {conversation_data.get('selected_size_name')} ({conversation_data.get('selected_size_value')})
+🔢 Quantity: {conversation_data.get('selected_quantity')}
+📍 Address: {conversation_data.get('delivery_address')}
+📮 PIN: {conversation_data.get('delivery_pincode')}
+🔄 Frequency: {frequency.get('name')}
+💰 *Total Amount: ₹{conversation_data.get('final_total', 0):.2f}*
+
+Reply *CONFIRM* to proceed to payment or *CANCEL* to start over."""
+
+async def show_existing_customer_menu(db, customer: WhatsAppCustomer):
+    """Show menu for existing customers"""
+    # Get customer's previous orders (implement based on your order history)
+    return """👋 *Welcome back!*
+
+What would you like to do?
+
+1️⃣ *Repeat last order*
+2️⃣ *Modify existing subscription*
+3️⃣ *Change delivery address*
+4️⃣ *New order*
+
+Please reply with the number of your choice."""
+
+# WhatsApp Webhook Route
+@api_router.post("/whatsapp")
+async def whatsapp_webhook(request_data: dict):
+    """Handle incoming WhatsApp messages from whapi.cloud"""
+    try:
+        messages = request_data.get("messages", [])
+        
+        for message_data in messages:
+            # Extract message details
+            chat_id = message_data.get("chat_id", "")
+            message_text = message_data.get("text", {}).get("body", "")
+            from_me = message_data.get("from_me", False)
+            
+            # Skip messages from us
+            if from_me:
+                continue
+                
+            # Extract phone number from chat_id
+            phone_number = chat_id.replace("@s.whatsapp.net", "")
+            
+            # Process the message
+            response = await process_whatsapp_message(db, phone_number, message_text)
+            
+            # Send response
+            if response:
+                await send_whatsapp_message(phone_number, response)
+        
+        return {"status": "success"}
+        
+    except Exception as e:
+        print(f"WhatsApp webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+# Manual WhatsApp send endpoint (for admin use)
+@api_router.post("/admin/send-whatsapp")
+async def send_whatsapp_admin(
+    message_data: WhatsAppMessage,
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["user_type"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    result = await send_whatsapp_message(message_data.chat_id, message_data.text)
+    return {"success": result is not None, "result": result}
+
 # Initialize admin user
 @api_router.post("/init-admin")
 async def init_admin():
