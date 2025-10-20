@@ -1407,6 +1407,453 @@ We're here to serve you fresh dairy products! 🥛"""
     else:
         return "Please reply *CONFIRM* to confirm your order or *CANCEL* to cancel."
 
+# New WhatsApp workflow functions
+
+async def handle_go_back(db, phone_number: str, customer: WhatsAppCustomer):
+    """Handle go back navigation"""
+    current_step = customer.current_step
+    
+    # Define step hierarchy for back navigation
+    step_hierarchy = {
+        "customer_type": "welcome",
+        "capture_location": "customer_type", 
+        "show_categories": "capture_location",
+        "show_products": "show_categories",
+        "select_quantity_frequency": "show_products",
+        "select_delivery_slot": "select_quantity_frequency",
+        "collect_address": "select_delivery_slot",
+        "collect_name": "collect_address",
+        "confirm_order": "collect_name",
+        "self_service_menu": "existing_menu"
+    }
+    
+    previous_step = step_hierarchy.get(current_step, "welcome")
+    await update_whatsapp_customer(db, phone_number, {"current_step": previous_step})
+    
+    # Return appropriate message for the previous step
+    if previous_step == "welcome":
+        return """🥛 *Welcome to Fresh Dairy!* 🥛
+
+Are you a:
+1️⃣ *New Customer*
+2️⃣ *Existing Customer*
+
+Please reply with *1* for New Customer or *2* for Existing Customer.
+
+_Type "Back" anytime to go to the previous step_"""
+    elif previous_step == "customer_type":
+        return """🥛 *Welcome to Fresh Dairy!* 🥛
+
+Are you a:
+1️⃣ *New Customer*
+2️⃣ *Existing Customer*
+
+Please reply with *1* for New Customer or *2* for Existing Customer.
+
+_Type "Back" anytime to go to the previous step_"""
+    elif previous_step == "capture_location":
+        return await capture_location_request()
+    elif previous_step == "show_categories":
+        return await show_categories_interactive_list(db)
+    else:
+        return "↩️ Going back to previous step..."
+
+async def handle_self_service(db, phone_number: str, action: str, customer: WhatsAppCustomer):
+    """Handle self-service options for existing customers"""
+    if action == "pause":
+        return """⏸️ *Pause Subscription*
+
+Your subscription will be paused from tomorrow.
+To resume, reply *RESUME* anytime.
+
+📱 Type *Back* to return to menu"""
+    
+    elif action == "skip tomorrow":
+        return """⏭️ *Skip Tomorrow's Delivery*
+
+Tomorrow's delivery has been skipped.
+Next delivery will be as per your regular schedule.
+
+📱 Type *Back* to return to menu"""
+    
+    elif action == "change qty":
+        return """🔢 *Change Quantity*
+
+Current quantity: 2 bottles
+Enter new quantity (1-10):
+
+📱 Type *Back* to return to menu"""
+    
+    elif action == "cancel subscription":
+        return """❌ *Cancel Subscription*
+
+Are you sure you want to cancel your subscription?
+Reply *YES* to confirm or *NO* to go back.
+
+📱 Type *Back* to return to menu"""
+
+async def capture_location_request():
+    """Request location/pincode from new customer"""
+    return """📍 *Location Required*
+
+Please share your location or enter your PIN CODE for delivery availability check:
+
+🗺️ Tap 📎 → Location to share your location
+OR
+📮 Type your 6-digit PIN CODE
+
+_Type "Back" to go to previous step_"""
+
+async def handle_location_capture(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle location/pincode capture"""
+    # Check if it's a pincode (6 digits)
+    if message.strip().isdigit() and len(message.strip()) == 6:
+        pincode = message.strip()
+        
+        # Check if pincode is serviceable
+        pincode_data = await db.pincodes.find_one({
+            "pincode": pincode,
+            "is_serviceable": True
+        })
+        
+        if not pincode_data:
+            return f"""❌ *Sorry, we don't deliver to {pincode} yet.*
+
+We're working to expand our delivery areas. Please try again with a different PIN CODE.
+
+📱 Type *Back* to go to previous step"""
+        
+        # Store pincode and move to categories
+        conversation_data = customer.conversation_data
+        conversation_data["delivery_pincode"] = pincode
+        conversation_data["delivery_area"] = pincode_data.get("area_name", "")
+        
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "show_categories",
+            "conversation_data": conversation_data
+        })
+        
+        return f"""✅ *Great! We deliver to {pincode}*
+📍 Area: {pincode_data.get('area_name', pincode)}
+
+{await show_categories_interactive_list(db)}"""
+    
+    # Handle location sharing (GPS coordinates)
+    elif "location" in message.lower() or "lat" in message.lower():
+        # For now, ask for pincode as fallback
+        return """📍 *Location received!*
+
+For accurate delivery, please also provide your PIN CODE:
+
+📮 Type your 6-digit PIN CODE
+
+📱 Type *Back* to go to previous step"""
+    
+    else:
+        return """❌ *Invalid input*
+
+Please share your location or enter a valid 6-digit PIN CODE.
+
+🗺️ Tap 📎 → Location to share your location
+OR
+📮 Type your 6-digit PIN CODE (e.g., 560001)
+
+📱 Type *Back* to go to previous step"""
+
+async def show_categories_interactive_list(db):
+    """Show categories using Interactive List format"""
+    categories = await db.categories.find({"is_active": True}).to_list(10)  # Max 10 for Interactive List
+    
+    if not categories:
+        return "Sorry, no products are currently available. Please contact support."
+    
+    message = """🛒 *Select Product Category*
+
+Choose from our fresh dairy products:
+
+"""
+    
+    for i, category in enumerate(categories, 1):
+        message += f"{i}️⃣ *{category['name']}*\n"
+        if category.get('description'):
+            message += f"   _{category['description']}_\n"
+        message += "\n"
+    
+    message += """📱 Reply with the number of your choice
+🔙 Type *Back* to go to previous step"""
+    
+    return message
+
+async def handle_category_selection_interactive(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle category selection from Interactive List"""
+    try:
+        categories = await db.categories.find({"is_active": True}).to_list(10)
+        selected_index = int(message) - 1
+        
+        if 0 <= selected_index < len(categories):
+            selected_category = categories[selected_index]
+            
+            # Update customer data
+            conversation_data = customer.conversation_data
+            conversation_data["selected_category_id"] = selected_category["id"]
+            conversation_data["selected_category_name"] = selected_category["name"]
+            
+            await update_whatsapp_customer(db, phone_number, {
+                "current_step": "show_products",
+                "conversation_data": conversation_data
+            })
+            
+            return await show_products_catalog(db, selected_category["id"])
+        else:
+            return f"""❌ Please select a valid option (1-{len(categories)}).
+
+📱 Type *Back* to go to previous step"""
+            
+    except ValueError:
+        return """❌ Please reply with a number to select a category.
+
+📱 Type *Back* to go to previous step"""
+
+async def show_products_catalog(db, category_id: str):
+    """Show products using Multi-Product Message format"""
+    # Get all products for the category (simplified - combining type, characteristic, size)
+    pipeline = [
+        {"$match": {"category_id": category_id, "is_active": True}},
+        {"$lookup": {
+            "from": "characteristics",
+            "localField": "id",
+            "foreignField": "product_type_id",
+            "as": "characteristics"
+        }},
+        {"$unwind": "$characteristics"},
+        {"$lookup": {
+            "from": "sizes", 
+            "localField": "characteristics.id",
+            "foreignField": "characteristic_id",
+            "as": "sizes"
+        }},
+        {"$unwind": "$sizes"},
+        {"$match": {"characteristics.is_active": True, "sizes.is_active": True}},
+        {"$limit": 30}  # Max 30 for Multi-Product Message
+    ]
+    
+    products = await db.product_types.aggregate(pipeline).to_list(30)
+    
+    if not products:
+        return """❌ No products available in this category.
+
+📱 Type *Back* to select a different category"""
+    
+    message = """🥛 *Available Products*
+
+Select a product to add to cart:
+
+"""
+    
+    for i, product in enumerate(products, 1):
+        char_name = product['characteristics']['name']
+        size_info = f"{product['sizes']['name']} ({product['sizes']['value']})"
+        price = product['sizes']['price']
+        
+        message += f"{i}️⃣ *{product['name']} - {char_name}*\n"
+        message += f"   📏 {size_info}\n"
+        message += f"   💰 ₹{price:.2f}\n\n"
+    
+    message += """📱 Reply with the number to select a product
+🔙 Type *Back* to select different category"""
+    
+    return message
+
+async def handle_product_selection_catalog(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle product selection from catalog"""
+    try:
+        category_id = customer.conversation_data.get("selected_category_id")
+        
+        # Get products (same pipeline as show_products_catalog)
+        pipeline = [
+            {"$match": {"category_id": category_id, "is_active": True}},
+            {"$lookup": {
+                "from": "characteristics",
+                "localField": "id", 
+                "foreignField": "product_type_id",
+                "as": "characteristics"
+            }},
+            {"$unwind": "$characteristics"},
+            {"$lookup": {
+                "from": "sizes",
+                "localField": "characteristics.id",
+                "foreignField": "characteristic_id", 
+                "as": "sizes"
+            }},
+            {"$unwind": "$sizes"},
+            {"$match": {"characteristics.is_active": True, "sizes.is_active": True}},
+            {"$limit": 30}
+        ]
+        
+        products = await db.product_types.aggregate(pipeline).to_list(30)
+        selected_index = int(message) - 1
+        
+        if 0 <= selected_index < len(products):
+            selected_product = products[selected_index]
+            
+            # Store product selection
+            conversation_data = customer.conversation_data
+            conversation_data["selected_product_type_id"] = selected_product["id"]
+            conversation_data["selected_product_type_name"] = selected_product["name"]
+            conversation_data["selected_characteristic_id"] = selected_product["characteristics"]["id"]
+            conversation_data["selected_characteristic_name"] = selected_product["characteristics"]["name"]
+            conversation_data["selected_size_id"] = selected_product["sizes"]["id"]
+            conversation_data["selected_size_name"] = selected_product["sizes"]["name"]
+            conversation_data["selected_size_value"] = selected_product["sizes"]["value"]
+            conversation_data["selected_size_price"] = selected_product["sizes"]["price"]
+            
+            await update_whatsapp_customer(db, phone_number, {
+                "current_step": "select_quantity_frequency",
+                "conversation_data": conversation_data
+            })
+            
+            return await show_quantity_frequency_options(selected_product)
+        else:
+            return f"""❌ Please select a valid option (1-{len(products)}).
+
+📱 Type *Back* to go to previous step"""
+            
+    except ValueError:
+        return """❌ Please reply with a number to select a product.
+
+📱 Type *Back* to go to previous step"""
+
+async def show_quantity_frequency_options(product):
+    """Show quantity and frequency selection combined"""
+    char_name = product['characteristics']['name']
+    size_info = f"{product['sizes']['name']} ({product['sizes']['value']})"
+    price = product['sizes']['price']
+    
+    return f"""📦 *Selected: {product['name']} - {char_name}*
+📏 Size: {size_info}
+💰 Price: ₹{price:.2f} per unit
+
+🔢 *Quantity & Frequency*
+
+1️⃣ *1 bottle - Once* (₹{price:.2f})
+2️⃣ *1 bottle - Daily* (₹{price * 30:.2f}/month)
+3️⃣ *2 bottles - Daily* (₹{price * 2 * 30:.2f}/month)
+4️⃣ *1 bottle - Alternate days* (₹{price * 15:.2f}/month)
+5️⃣ *Custom quantity & frequency*
+
+📱 Reply with the number of your choice
+🔙 Type *Back* to select different product"""
+
+async def handle_quantity_frequency_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle combined quantity and frequency selection"""
+    conversation_data = customer.conversation_data
+    price = conversation_data.get("selected_size_price", 0)
+    
+    frequency_options = {
+        "1": {"qty": 1, "freq": "once", "freq_name": "One time", "days": 1, "total": price},
+        "2": {"qty": 1, "freq": "daily", "freq_name": "Daily", "days": 30, "total": price * 30},
+        "3": {"qty": 2, "freq": "daily", "freq_name": "Daily", "days": 30, "total": price * 2 * 30},
+        "4": {"qty": 1, "freq": "alternate_day", "freq_name": "Alternate days", "days": 30, "total": price * 15},
+        "5": {"qty": 0, "freq": "custom", "freq_name": "Custom", "days": 0, "total": 0}
+    }
+    
+    if message.strip() in frequency_options:
+        selection = frequency_options[message.strip()]
+        
+        if selection["freq"] == "custom":
+            return """🔧 *Custom Order*
+
+Please specify:
+1. Quantity per delivery (1-10)
+2. Frequency (daily/alternate/weekly)
+
+Example: "2 bottles daily" or "1 bottle weekly"
+
+📱 Type *Back* to select from preset options"""
+        
+        # Store selection
+        conversation_data["selected_quantity"] = selection["qty"]
+        conversation_data["delivery_frequency"] = {
+            "type": selection["freq"],
+            "name": selection["freq_name"],
+            "days": selection["days"]
+        }
+        conversation_data["total_amount"] = selection["total"]
+        
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "select_delivery_slot",
+            "conversation_data": conversation_data
+        })
+        
+        return await show_delivery_slots()
+    else:
+        return """❌ Please select a valid option (1-5).
+
+📱 Type *Back* to go to previous step"""
+
+async def show_delivery_slots():
+    """Show available delivery time slots"""
+    return """🕐 *Select Delivery Time*
+
+When would you like your delivery?
+
+1️⃣ *6:00 AM - 8:00 AM* (Early Morning)
+2️⃣ *8:00 AM - 10:00 AM* (Morning)
+
+📱 Reply with the number of your choice
+🔙 Type *Back* to change quantity/frequency"""
+
+async def handle_delivery_slot_selection(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle delivery time slot selection"""
+    slot_options = {
+        "1": "6:00 AM - 8:00 AM",
+        "2": "8:00 AM - 10:00 AM"
+    }
+    
+    if message.strip() in slot_options:
+        selected_slot = slot_options[message.strip()]
+        
+        conversation_data = customer.conversation_data
+        conversation_data["delivery_time_slot"] = selected_slot
+        
+        await update_whatsapp_customer(db, phone_number, {
+            "current_step": "collect_address",
+            "conversation_data": conversation_data
+        })
+        
+        return f"""✅ *Delivery Time: {selected_slot}*
+
+📝 *Please provide your complete delivery address:*
+
+Include:
+• House/Flat number
+• Street name  
+• Landmark
+• Area
+
+Example: "A-101, Green Valley Apartments, Near City Mall, Koramangala"
+
+📱 Type *Back* to change delivery time"""
+    else:
+        return """❌ Please select a valid time slot (1 or 2).
+
+📱 Type *Back* to go to previous step"""
+
+async def handle_self_service_menu(db, phone_number: str, message: str, customer: WhatsAppCustomer):
+    """Handle self-service menu options"""
+    if message.strip() == "1":
+        return await handle_self_service(db, phone_number, "pause", customer)
+    elif message.strip() == "2":
+        return await handle_self_service(db, phone_number, "skip tomorrow", customer)
+    elif message.strip() == "3":
+        return await handle_self_service(db, phone_number, "change qty", customer)
+    elif message.strip() == "4":
+        return await handle_self_service(db, phone_number, "cancel subscription", customer)
+    else:
+        return """❌ Please select a valid option (1-4).
+
+📱 Type *Back* to go to main menu"""
+
 async def show_existing_customer_menu(db, customer: WhatsAppCustomer):
     """Show menu for existing customers"""
     # Get customer's previous orders (implement based on your order history)
