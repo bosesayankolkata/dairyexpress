@@ -1911,12 +1911,6 @@ async def handle_existing_customer_menu(db, phone_number: str, message: str, cus
     
     else:
         return "❌ Please select a valid option (1-8).\n\n📱 Type *Back* to go to previous step"
-⚙️ *Account Settings:*
-7️⃣ *Change delivery address*
-8️⃣ *View order history*
-
-📱 Reply with the number of your choice
-🔙 Type *Back* to go to welcome message"""
 
 # WhatsApp Webhook Route
 @api_router.post("/whatsapp")
