@@ -2234,38 +2234,7 @@ async def handle_self_service_menu(db, phone_number: str, message: str, customer
     """Handle self-service menu interactions"""
     return await handle_existing_customer_menu(db, phone_number, message, customer)
 
-async def handle_existing_customer_menu(db, phone_number: str, message: str, customer: WhatsAppCustomer):
-    """Handle existing customer menu selections"""
-    choice = message.strip()
-    
-    if choice == "1":  # Repeat last order
-        return "🔄 *Repeat Last Order*\n\nYour last order:\n🥛 Fresh Milk - Full Cream (500ml) x 2\n📅 Daily delivery\n💰 ₹60/day\n\nReply *CONFIRM* to repeat this order or *BACK* to return to menu."
-    
-    elif choice == "2":  # New order
-        await update_whatsapp_customer(db, phone_number, {"current_step": "capture_location"})
-        return await capture_location_request()
-    
-    elif choice == "3":  # Pause subscription
-        return await handle_self_service(db, phone_number, "pause", customer)
-    
-    elif choice == "4":  # Skip tomorrow
-        return await handle_self_service(db, phone_number, "skip tomorrow", customer)
-    
-    elif choice == "5":  # Change quantity
-        return await handle_self_service(db, phone_number, "change qty", customer)
-    
-    elif choice == "6":  # Cancel subscription
-        return await handle_self_service(db, phone_number, "cancel subscription", customer)
-    
-    elif choice == "7":  # Change address
-        await update_whatsapp_customer(db, phone_number, {"current_step": "collect_address"})
-        return "📝 *Update Delivery Address*\n\nPlease provide your new complete delivery address:\n\nInclude:\n• House/Flat number\n• Street name\n• Landmark\n• Area\n\n📱 Type *Back* to return to menu"
-    
-    elif choice == "8":  # Order history
-        return "📊 *Order History*\n\nRecent orders:\n1. 15 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n2. 14 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n3. 13 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n\n📱 Type *Back* to return to menu"
-    
-    else:
-        return "❌ Please select a valid option (1-8).\n\n📱 Type *Back* to go to previous step"
+# Duplicate function removed - using the updated version above
 
 # WhatsApp Webhook Route
 @api_router.post("/whatsapp")
