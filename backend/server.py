@@ -217,7 +217,7 @@ class DeliveryUpdate(BaseModel):
 class Delivery(DeliveryBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     delivery_person_id: str
-    status: DeliveryStatus = DeliveryStatus.PENDING
+    delivery_status: DeliveryStatus = DeliveryStatus.PENDING
     reason: Optional[NotDeliveredReason] = None
     comments: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
