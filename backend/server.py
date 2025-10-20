@@ -1877,14 +1877,7 @@ async def handle_existing_customer_menu(db, phone_number: str, message: str, cus
     choice = message.strip()
     
     if choice == "1":  # Repeat last order
-        return """🔄 *Repeat Last Order*
-
-Your last order:
-🥛 Fresh Milk - Full Cream (500ml) x 2
-📅 Daily delivery
-💰 ₹60/day
-
-Reply *CONFIRM* to repeat this order or *BACK* to return to menu."""
+        return "🔄 *Repeat Last Order*\n\nYour last order:\n🥛 Fresh Milk - Full Cream (500ml) x 2\n📅 Daily delivery\n💰 ₹60/day\n\nReply *CONFIRM* to repeat this order or *BACK* to return to menu."
     
     elif choice == "2":  # New order
         await update_whatsapp_customer(db, phone_number, {"current_step": "capture_location"})
