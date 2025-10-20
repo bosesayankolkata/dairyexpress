@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import ProductManagement from './ProductManagement';
 import PinCodeManagement from './PinCodeManagement';
 import CustomerManagement from './CustomerManagement';
+import WhatsAppManagement from './WhatsAppManagement';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
