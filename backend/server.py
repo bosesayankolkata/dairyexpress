@@ -1897,17 +1897,7 @@ async def handle_existing_customer_menu(db, phone_number: str, message: str, cus
     
     elif choice == "7":  # Change address
         await update_whatsapp_customer(db, phone_number, {"current_step": "collect_address"})
-        return """📝 *Update Delivery Address*
-
-Please provide your new complete delivery address:
-
-Include:
-• House/Flat number
-• Street name
-• Landmark  
-• Area
-
-📱 Type *Back* to return to menu"""
+        return "📝 *Update Delivery Address*\n\nPlease provide your new complete delivery address:\n\nInclude:\n• House/Flat number\n• Street name\n• Landmark\n• Area\n\n📱 Type *Back* to return to menu"
     
     elif choice == "8":  # Order history
         return """📊 *Order History*
