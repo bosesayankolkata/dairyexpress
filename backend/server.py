@@ -868,6 +868,14 @@ async def process_whatsapp_message(db, phone_number: str, message: str) -> str:
     current_step = customer.current_step
     message_lower = message.lower().strip()
     
+    # Handle "Go Back" option in any step
+    if message_lower in ["back", "go back", "previous", "←"]:
+        return await handle_go_back(db, phone_number, customer)
+    
+    # Handle self-service options
+    if message_lower in ["pause", "skip tomorrow", "change qty", "cancel subscription"]:
+        return await handle_self_service(db, phone_number, message_lower, customer)
+    
     # Welcome message
     if current_step == "welcome" or message_lower in ["hi", "hello", "hey", "start"]:
         await update_whatsapp_customer(db, phone_number, {"current_step": "customer_type"})
@@ -877,22 +885,34 @@ Are you a:
 1️⃣ *New Customer*
 2️⃣ *Existing Customer*
 
-Please reply with *1* for New Customer or *2* for Existing Customer."""
+Please reply with *1* for New Customer or *2* for Existing Customer.
+
+_Type "Back" anytime to go to the previous step_"""
 
     # Customer type selection
     elif current_step == "customer_type":
         if message_lower in ["1", "new", "new customer"]:
-            await update_whatsapp_customer(db, phone_number, {"current_step": "show_categories"})
-            return await show_product_categories(db)
+            await update_whatsapp_customer(db, phone_number, {"current_step": "capture_location"})
+            return await capture_location_request()
         elif message_lower in ["2", "existing", "existing customer"]:
             await update_whatsapp_customer(db, phone_number, {"current_step": "existing_menu"})
             return await show_existing_customer_menu(db, customer)
         else:
-            return "Please reply with *1* for New Customer or *2* for Existing Customer."
+            return """Please reply with *1* for New Customer or *2* for Existing Customer.
+
+📱 Type *Back* to return to welcome message"""
     
-    # Show product categories
+    # Capture location
+    elif current_step == "capture_location":
+        return await handle_location_capture(db, phone_number, message, customer)
+    
+    # Show categories via Interactive List
     elif current_step == "show_categories":
-        return await handle_category_selection(db, phone_number, message, customer)
+        return await handle_category_selection_interactive(db, phone_number, message, customer)
+    
+    # Show products via Multi-Product Message
+    elif current_step == "show_products":
+        return await handle_product_selection_catalog(db, phone_number, message, customer)
     
     # Handle product types
     elif current_step == "show_product_types":
@@ -906,13 +926,13 @@ Please reply with *1* for New Customer or *2* for Existing Customer."""
     elif current_step == "show_sizes":
         return await handle_size_selection(db, phone_number, message, customer)
     
-    # Handle quantity
-    elif current_step == "select_quantity":
-        return await handle_quantity_selection(db, phone_number, message, customer)
+    # Handle quantity and frequency
+    elif current_step == "select_quantity_frequency":
+        return await handle_quantity_frequency_selection(db, phone_number, message, customer)
     
-    # Handle pincode
-    elif current_step == "check_pincode":
-        return await handle_pincode_check(db, phone_number, message, customer)
+    # Handle delivery slot
+    elif current_step == "select_delivery_slot":
+        return await handle_delivery_slot_selection(db, phone_number, message, customer)
     
     # Handle address
     elif current_step == "collect_address":
@@ -922,13 +942,13 @@ Please reply with *1* for New Customer or *2* for Existing Customer."""
     elif current_step == "collect_name":
         return await handle_name_collection(db, phone_number, message, customer)
     
-    # Handle frequency
-    elif current_step == "select_frequency":
-        return await handle_frequency_selection(db, phone_number, message, customer)
-    
     # Handle order confirmation
     elif current_step == "confirm_order":
         return await handle_order_confirmation(db, phone_number, message, customer)
+    
+    # Self-service menu
+    elif current_step == "self_service_menu":
+        return await handle_self_service_menu(db, phone_number, message, customer)
     
     # Default fallback
     else:
