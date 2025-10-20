@@ -196,6 +196,22 @@ class Feedback(FeedbackBase):
     delivery_person_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# Payment Models
+class PaymentBase(BaseModel):
+    order_id: str
+    amount: float
+    currency: str = "INR"
+    method: str = "razorpay"
+    
+class Payment(PaymentBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    razorpay_order_id: Optional[str] = None
+    razorpay_payment_id: Optional[str] = None
+    payment_status: PaymentStatus = PaymentStatus.PENDING
+    payment_link: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class DeliveryBase(BaseModel):
     customer_name: str
     customer_address: str
