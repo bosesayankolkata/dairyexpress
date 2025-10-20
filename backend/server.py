@@ -65,7 +65,7 @@ class PaymentStatus(str, Enum):
     SUCCESS = "success"
     FAILED = "failed"
 
-# Models
+# Enhanced Delivery Partner Models
 class DeliveryPersonBase(BaseModel):
     name: str
     phone: str
@@ -86,7 +86,63 @@ class DeliveryPerson(DeliveryPersonBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     selected_pincodes: List[str] = []
     total_deliveries: int = 0
+    is_active: bool = True
+    last_login: Optional[datetime] = None
+    login_streak: int = 0
+    missed_login_calls: int = 0
+    daily_payout: float = 0.0
+    monthly_payout: float = 0.0
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Login Session Models
+class LoginSession(BaseModel):
+    delivery_person_id: str
+    login_time: datetime
+    login_date: str  # YYYY-MM-DD format
+    is_on_time: bool  # True if logged in between 5:00-5:30 AM
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class DailyAttendance(BaseModel):
+    delivery_person_id: str
+    date: str  # YYYY-MM-DD
+    expected_login_time: str = "05:00"
+    actual_login_time: Optional[str] = None
+    is_present: bool = False
+    is_on_time: bool = False
+    calls_made: int = 0
+    deliveries_assigned: int = 0
+    deliveries_completed: int = 0
+    daily_earning: float = 0.0
+
+# Payout Models
+class PayoutBase(BaseModel):
+    delivery_person_id: str
+    date: str
+    deliveries_completed: int
+    base_pay: float
+    bonus: float = 0.0
+    total_amount: float
+
+class Payout(PayoutBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Auto-call System Models
+class AutoCallLog(BaseModel):
+    delivery_person_id: str
+    phone_number: str
+    call_time: datetime
+    call_status: str  # "initiated", "answered", "no_answer", "failed"
+    call_duration: int = 0  # in seconds
+    attempt_number: int  # 1, 2, or 3
+
+class DeliveryReassignment(BaseModel):
+    original_delivery_person_id: str
+    new_delivery_person_id: str
+    delivery_ids: List[str]
+    reason: str = "missed_login_calls"
+    reassigned_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Product Management Models
 class CategoryBase(BaseModel):
