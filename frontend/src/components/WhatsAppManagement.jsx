@@ -41,10 +41,9 @@ const WhatsAppManagement = () => {
       setLoading(true);
       
       // Fetch WhatsApp customers and orders
-      // Note: These endpoints would need to be implemented in the backend
       const [customersRes, ordersRes] = await Promise.all([
-        axios.get(`${API}/admin/customers`).catch(() => ({ data: [] })),
-        axios.get(`${API}/admin/orders`).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/whatsapp-customers`).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/whatsapp-orders`).catch(() => ({ data: [] }))
       ]);
       
       const customers = customersRes.data || [];
