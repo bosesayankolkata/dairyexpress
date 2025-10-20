@@ -812,6 +812,19 @@ WHAPI_API_URL = "https://gate.whapi.cloud"
 WHAPI_TOKEN = "4NtJEaPI6sZSAzNKJlLKkZ3fAANcTNeJ"
 WHATSAPP_PHONE = "+91 90075 09919"
 
+# Razorpay Configuration (Will be activated when API keys are received)
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_placeholder')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', 'placeholder_secret')
+RAZORPAY_WEBHOOK_SECRET = os.environ.get('RAZORPAY_WEBHOOK_SECRET', 'webhook_secret')
+
+# Initialize Razorpay Client (will work when real keys are added)
+try:
+    razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+    RAZORPAY_ENABLED = RAZORPAY_KEY_ID != 'rzp_test_placeholder'
+except Exception:
+    razorpay_client = None
+    RAZORPAY_ENABLED = False
+
 # WhatsApp Models
 class WhatsAppMessage(BaseModel):
     chat_id: str
