@@ -1903,9 +1903,7 @@ async def handle_existing_customer_menu(db, phone_number: str, message: str, cus
         return "📊 *Order History*\n\nRecent orders:\n1. 15 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n2. 14 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n3. 13 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n\n📱 Type *Back* to return to menu"
     
     else:
-        return """❌ Please select a valid option (1-8).
-
-📱 Type *Back* to go to previous step"""
+        return "❌ Please select a valid option (1-8).\n\n📱 Type *Back* to go to previous step"
 ⚙️ *Account Settings:*
 7️⃣ *Change delivery address*
 8️⃣ *View order history*
