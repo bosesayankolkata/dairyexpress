@@ -888,6 +888,109 @@ async def send_whatsapp_message(phone_number: str, message: str):
         print(f"WhatsApp send error: {e}")
         return None
 
+# Payment Functions
+async def create_payment_link(db, order_id: str, amount: float, customer_data: dict):
+    """Create Razorpay payment link or mock payment link"""
+    
+    if RAZORPAY_ENABLED and razorpay_client:
+        # Real Razorpay payment link (when API keys are available)
+        try:
+            razorpay_order = razorpay_client.order.create({
+                "amount": int(amount * 100),  # Convert to paise
+                "currency": "INR",
+                "payment_capture": 1
+            })
+            
+            payment_link = razorpay_client.payment_link.create({
+                "amount": int(amount * 100),
+                "currency": "INR",
+                "description": f"Fresh Dairy Order #{order_id}",
+                "customer": {
+                    "name": customer_data.get("name", "Customer"),
+                    "contact": customer_data.get("phone", ""),
+                },
+                "notify": {
+                    "sms": True,
+                    "email": False
+                },
+                "callback_url": f"https://dairyexpress.preview.emergentagent.com/payment-success",
+                "callback_method": "get"
+            })
+            
+            # Store payment record
+            payment_data = Payment(
+                order_id=order_id,
+                amount=amount,
+                razorpay_order_id=razorpay_order["id"],
+                payment_link=payment_link["short_url"]
+            )
+            
+            payment_mongo_data = prepare_for_mongo(payment_data.dict())
+            await db.payments.insert_one(payment_mongo_data)
+            
+            return payment_link["short_url"]
+            
+        except Exception as e:
+            print(f"Razorpay error: {e}")
+            return create_mock_payment_link(order_id, amount)
+    
+    else:
+        # Mock payment link (for testing until Oct 23rd)
+        return create_mock_payment_link(order_id, amount)
+
+def create_mock_payment_link(order_id: str, amount: float):
+    """Create mock payment link for testing"""
+    base_url = "https://dairyexpress.preview.emergentagent.com"
+    return f"{base_url}/mock-payment?order={order_id}&amount={amount}"
+
+async def handle_payment_success(db, order_id: str, payment_id: str = None):
+    """Handle successful payment"""
+    
+    # Update order status
+    await db.orders.update_one(
+        {"order_number": order_id},
+        {"$set": {
+            "payment_status": PaymentStatus.SUCCESS,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update payment record
+    if payment_id:
+        await db.payments.update_one(
+            {"order_id": order_id},
+            {"$set": {
+                "razorpay_payment_id": payment_id,
+                "payment_status": PaymentStatus.SUCCESS,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    
+    return True
+
+async def handle_payment_failure(db, order_id: str, reason: str = "Payment failed"):
+    """Handle failed payment"""
+    
+    # Update order status
+    await db.orders.update_one(
+        {"order_number": order_id},
+        {"$set": {
+            "payment_status": PaymentStatus.FAILED,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Update payment record
+    await db.payments.update_one(
+        {"order_id": order_id},
+        {"$set": {
+            "payment_status": PaymentStatus.FAILED,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return True
+
 async def get_or_create_whatsapp_customer(db, phone_number: str) -> WhatsAppCustomer:
     """Get existing WhatsApp customer or create new one"""
     customer = await db.whatsapp_customers.find_one({"whatsapp_number": phone_number})
