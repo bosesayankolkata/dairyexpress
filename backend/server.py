@@ -1900,14 +1900,7 @@ async def handle_existing_customer_menu(db, phone_number: str, message: str, cus
         return "📝 *Update Delivery Address*\n\nPlease provide your new complete delivery address:\n\nInclude:\n• House/Flat number\n• Street name\n• Landmark\n• Area\n\n📱 Type *Back* to return to menu"
     
     elif choice == "8":  # Order history
-        return """📊 *Order History*
-
-Recent orders:
-1. 15 Dec - Fresh Milk 500ml x2 - ₹60 ✅
-2. 14 Dec - Fresh Milk 500ml x2 - ₹60 ✅  
-3. 13 Dec - Fresh Milk 500ml x2 - ₹60 ✅
-
-📱 Type *Back* to return to menu"""
+        return "📊 *Order History*\n\nRecent orders:\n1. 15 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n2. 14 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n3. 13 Dec - Fresh Milk 500ml x2 - ₹60 ✅\n\n📱 Type *Back* to return to menu"
     
     else:
         return """❌ Please select a valid option (1-8).
