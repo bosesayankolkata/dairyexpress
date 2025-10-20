@@ -528,6 +528,11 @@ const AdminDashboard = ({ user, onLogout }) => {
             <CustomerManagement />
           </TabsContent>
 
+          {/* WhatsApp Tab */}
+          <TabsContent value="whatsapp">
+            <WhatsAppManagement />
+          </TabsContent>
+
           {/* Delivery Persons Tab */}
           <TabsContent value="persons">
             <Card>
