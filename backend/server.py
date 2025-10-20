@@ -918,9 +918,17 @@ Please reply with *1* for New Customer or *2* for Existing Customer."""
     elif current_step == "collect_address":
         return await handle_address_collection(db, phone_number, message, customer)
     
+    # Handle name collection
+    elif current_step == "collect_name":
+        return await handle_name_collection(db, phone_number, message, customer)
+    
     # Handle frequency
     elif current_step == "select_frequency":
         return await handle_frequency_selection(db, phone_number, message, customer)
+    
+    # Handle order confirmation
+    elif current_step == "confirm_order":
+        return await handle_order_confirmation(db, phone_number, message, customer)
     
     # Default fallback
     else:
